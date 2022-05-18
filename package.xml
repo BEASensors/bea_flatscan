@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+  <name>bea_sensors</name>
+  <version>0.0.0</version>
+  <description>bea sensor drivers</description>
+  <maintainer email="song.boyang5591@outlook.com">bs</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+</package>
