@@ -12,16 +12,16 @@ Driver::Driver(const std::string& port, const int& baudrate) {
 Driver::~Driver() { com_.Close(); }
 
 void Driver::HandleReceivedData(char* data, int length) {
-  ROS_INFO("Received data length: %d", length);
   for (int i = 0; i < length; ++i) {
-    std::cout << std::hex << std::setw(2) << data[i] << " ";
     if (protocol_.InsertByte(data[i]) > 0) {
       DataFrame frame;
-      protocol_.GetReceivedFrame(frame);
+      if (!protocol_.GetReceivedFrame(frame)) {
+        ROS_ERROR("Get received frame error");
+        continue;
+      }
       ParseDataFrame(frame);
     }
   }
-  std::cout << std::endl;
 }
 
 void Driver::ParseDataFrame(DataFrame& frame) {
@@ -29,11 +29,11 @@ void Driver::ParseDataFrame(DataFrame& frame) {
   const uint8_t* data = frame.data();
   switch (command) {
     case CommandFromSensor::MDI:
+      ROS_INFO("Received MDI message");
       break;
     default:
       break;
   }
-  delete data;
 }
 
 void Driver::SendCommand(const uint16_t& command, const uint8_t* data) {
@@ -43,7 +43,6 @@ void Driver::SendCommand(const uint16_t& command, const uint8_t* data) {
       data_length = 22;
       break;
     default:
-      delete data;
       return;
   }
 

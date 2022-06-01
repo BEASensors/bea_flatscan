@@ -37,15 +37,40 @@ class DataFrame {
     std::copy(data, data + length, data_);
   }
 
+  DataFrame(const DataFrame& other) {
+    data_ = new uint8_t[other.length_];
+    length_ = other.length_;
+    command_ = other.command_;
+    std::copy(other.data_, other.data_ + other.length_, data_);
+  }
+
   ~DataFrame() {
     if (data_) {
-      delete (data_);
+      delete[] data_;
       data_ = nullptr;
     }
   }
 
-  const uint16_t command() { return command_; }
-  const uint16_t length() { return length_; }
+  DataFrame& operator=(const DataFrame& other) {
+    if (this == &other) {
+      return *this;
+    }
+
+    if (data_) {
+      delete[] data_;
+      data_ = nullptr;
+    }
+
+    data_ = new uint8_t[other.length_];
+    length_ = other.length_;
+    command_ = other.command_;
+    std::copy(other.data_, other.data_ + other.length_, data_);
+
+    return *this;
+  }
+
+  const uint16_t& command() { return command_; }
+  const uint16_t& length() { return length_; }
   const uint8_t* data() { return data_; }
 
  private:
@@ -89,7 +114,7 @@ class Protocol {
   uint16_t checksum_ = 0;
   uint8_t* data_;
 
-  boost::lockfree::spsc_queue<DataFrame, boost::lockfree::capacity<100> > queue_;
+  boost::lockfree::spsc_queue<DataFrame, boost::lockfree::capacity<100>> queue_;
 };
 
 }  // namespace bea_sensors

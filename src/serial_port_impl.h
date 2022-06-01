@@ -96,7 +96,7 @@ void* SerialPort<cInstance>::ReceiverRoutine(void* arg) {
       tcsetattr(port->serial_fd_, TCSANOW, &newtio);
 
       port->is_connected_ = true;
-      ROS_INFO("Open %s successfully (baudrate: %d), let's rock!", port->port_.c_str(), baudrate);
+      ROS_INFO("Open %s successfully (baudrate: %d), let's rock!", port->port_.c_str(), port->baudrate_);
       break;
     }
 

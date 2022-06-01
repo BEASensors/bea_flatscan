@@ -13,7 +13,7 @@ Protocol::Protocol(int buffer_size) : max_buffer_size_(buffer_size) { data_ = ne
 
 Protocol::Protocol() { data_ = new uint8_t[max_buffer_size_]; }
 
-Protocol::~Protocol() { delete data_; }
+Protocol::~Protocol() { delete[] data_; }
 
 int Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
   size_t index{0};
@@ -21,7 +21,7 @@ int Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, const 
     data_out[index++] = sync_head_.at(i);
   }
 
-  uint16_t frame_length{length + 15};
+  uint16_t frame_length{static_cast<uint16_t>(length + 15)};
   data_out[index++] = static_cast<uint8_t>(frame_length & 0xff);  // check the order
   data_out[index++] = static_cast<uint8_t>((frame_length >> 8) & 0xff);
 
@@ -94,8 +94,8 @@ bool Protocol::ExtractSync(const uint8_t& byte) {
     }
     return false;
   } else if (index < length_size) {
-    data_length_ <<= 8;
-    data_length_ |= static_cast<uint16_t>(byte);  // check the order
+    data_length_ >>= 8;
+    data_length_ |= (static_cast<uint16_t>(byte) << 8);
     ++index;
     return false;
   } else if (index < tail_size) {
@@ -116,8 +116,8 @@ bool Protocol::ExtractSync(const uint8_t& byte) {
 bool Protocol::ExtractCommand(const uint8_t& byte) {
   static size_t index{0};
   if (index < 2) {
-    command_ <<= 8;
-    command_ |= static_cast<uint16_t>(byte);  // check the order
+    command_ >>= 8;
+    command_ |= (static_cast<uint16_t>(byte) << 8);
     ++index;
     return false;
   }
@@ -142,23 +142,28 @@ bool Protocol::ExtractData(const uint8_t& byte) {
 bool Protocol::ExtractChecksum(const uint8_t& byte) {
   static size_t index{0};
   if (index < 2) {
-    checksum_ <<= 8;
-    checksum_ |= static_cast<uint16_t>(byte);  // check the order
+    checksum_ >>= 8;
+    checksum_ |= (static_cast<uint16_t>(byte) << 8);
     ++index;
     return false;
   }
 
   index = 0;
+  ROS_INFO("Received valid checksum: %x", checksum_);
+  return true;
+
   const size_t frame_length{static_cast<size_t>(data_length_) + 13};
   uint8_t* frame = new uint8_t[frame_length];
   for (size_t i = 0; i < frame_length; ++i) {
     // TODO: recover the frame, without checksum
   }
   if (checksum_ == CRC16(frame, frame_length)) {
-    delete frame;
+    delete[] frame;
+    ROS_INFO("CRC16 check succeeded");
     return true;
   } else {
-    delete frame;
+    delete[] frame;
+    ROS_WARN("CRC16 check failed");
     return false;
   }
 }
