@@ -12,13 +12,16 @@ Driver::Driver(const std::string& port, const int& baudrate) {
 Driver::~Driver() { com_.Close(); }
 
 void Driver::HandleReceivedData(char* data, int length) {
+  ROS_INFO("Received data length: %d", length);
   for (int i = 0; i < length; ++i) {
+    std::cout << std::hex << std::setw(2) << data[i] << " ";
     if (protocol_.InsertByte(data[i]) > 0) {
       DataFrame frame;
       protocol_.GetReceivedFrame(frame);
       ParseDataFrame(frame);
     }
   }
+  std::cout << std::endl;
 }
 
 void Driver::ParseDataFrame(DataFrame& frame) {

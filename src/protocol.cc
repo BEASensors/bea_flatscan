@@ -5,7 +5,7 @@
 #define HEADER_SIZE 4
 #define MSG_SIZE (HEADER_SIZE + 1 + 2 + 2)  // header(4) + data(1)+cs(2) + end_sync(2)= 9
 
-constexpr uint16_t bea_polynom{0x90d9};
+constexpr uint16_t polynomial{0x90d9};
 
 namespace bea_sensors {
 
@@ -13,7 +13,7 @@ Protocol::Protocol(int buffer_size) : max_buffer_size_(buffer_size) { data_ = ne
 
 Protocol::Protocol() { data_ = new uint8_t[max_buffer_size_]; }
 
-Protocol::~Protocol() { delete (data_); }
+Protocol::~Protocol() { delete data_; }
 
 int Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
   size_t index{0};
@@ -50,25 +50,25 @@ int Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, const 
 int Protocol::InsertByte(const uint8_t& byte) {
   switch (field_) {
     case Field::SYNC:
-      if (SeparateSync(byte)) {
+      if (ExtractSync(byte)) {
         field_ = Field::CMD;
       } else {
         return -1;
       }
     case Field::CMD:
-      if (SeparateCommand(byte)) {
+      if (ExtractCommand(byte)) {
         field_ = Field::DATA;
       } else {
         return -2;
       }
     case Field::DATA:
-      if (SeparateData(byte)) {
+      if (ExtractData(byte)) {
         field_ = Field::CHK;
       } else {
         return -3;
       }
     case Field::CHK:
-      if (SeparateChecksum(byte)) {
+      if (ExtractChecksum(byte)) {
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
         queue_.push(frame);
@@ -81,7 +81,7 @@ int Protocol::InsertByte(const uint8_t& byte) {
   }
 }
 
-bool Protocol::SeparateSync(const uint8_t& byte) {
+bool Protocol::ExtractSync(const uint8_t& byte) {
   static const size_t head_size{sync_head_.size()};
   static const size_t length_size{head_size + 2};
   static const size_t tail_size{length_size + sync_tail_.size()};
@@ -113,7 +113,7 @@ bool Protocol::SeparateSync(const uint8_t& byte) {
   }
 }
 
-bool Protocol::SeparateCommand(const uint8_t& byte) {
+bool Protocol::ExtractCommand(const uint8_t& byte) {
   static size_t index{0};
   if (index < 2) {
     command_ <<= 8;
@@ -123,10 +123,11 @@ bool Protocol::SeparateCommand(const uint8_t& byte) {
   }
 
   index = 0;
+  ROS_INFO("Received valid command: %x", command_);
   return true;
 }
 
-bool Protocol::SeparateData(const uint8_t& byte) {
+bool Protocol::ExtractData(const uint8_t& byte) {
   static size_t index{0};
   if (index < data_length_) {
     data_[index] = byte;
@@ -138,7 +139,7 @@ bool Protocol::SeparateData(const uint8_t& byte) {
   return true;
 }
 
-bool Protocol::SeparateChecksum(const uint8_t& byte) {
+bool Protocol::ExtractChecksum(const uint8_t& byte) {
   static size_t index{0};
   if (index < 2) {
     checksum_ <<= 8;
@@ -169,7 +170,7 @@ uint16_t Protocol::CRC16(uint8_t* buf, uint16_t cnt) {
     crc ^= (uint16_t)(buf[i] << 8); /* move byte into MSB of 16bit CRC */
     for (j = 0; j < 8; ++j) {
       if ((crc & 0x8000) != 0) { /* test for MSB = bit 15 */
-        crc = (uint16_t)((crc << 1) ^ bea_polynom);
+        crc = (uint16_t)((crc << 1) ^ polynomial);
       } else {
         crc <<= 1;
       }

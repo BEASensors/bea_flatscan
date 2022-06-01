@@ -65,10 +65,10 @@ class Protocol {
   int InsertByte(const uint8_t& byte);
 
  private:
-  bool SeparateSync(const uint8_t& byte);
-  bool SeparateCommand(const uint8_t& byte);
-  bool SeparateData(const uint8_t& byte);
-  bool SeparateChecksum(const uint8_t& byte);
+  bool ExtractSync(const uint8_t& byte);
+  bool ExtractCommand(const uint8_t& byte);
+  bool ExtractData(const uint8_t& byte);
+  bool ExtractChecksum(const uint8_t& byte);
   uint16_t CRC16(uint8_t* buf, uint16_t cnt);
 
  private:
