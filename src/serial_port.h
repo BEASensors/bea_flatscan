@@ -7,22 +7,22 @@
 namespace bea_sensors {
 
 template <class cInstance>
-class RtSerialPort {
+class SerialPort {
  public:
-  RtSerialPort();
-  ~RtSerialPort();
+  SerialPort();
+  ~SerialPort();
 
   typedef void (cInstance::*tFunction)(char* data, int length);
 
-  void registerCallback(cInstance* instance, tFunction function_ptr);
-  int connect(std::string port, int baud);
-  int close();
-  int write(char* data, int length);
+  void RegisterCallback(cInstance* instance, tFunction function_ptr);
+  int Connect(std::string port, int baud);
+  int Close();
+  int Write(char* data, int length);
 
  protected:
-  static void* receiver_thread(void* arg);
-  int getBaudrate(int baud);
-  void handleReceivedData(char* data, int length);
+  static void* ReceiverRoutine(void* arg);
+  int GetBaudrate(int baud);
+  void HandleReceivedData(char* data, int length);
 
  protected:
   bool is_running_ = false;

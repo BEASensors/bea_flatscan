@@ -5,11 +5,11 @@
 namespace bea_sensors {
 
 Driver::Driver(const std::string& port, const int& baudrate) {
-  com_.registerCallback(this, &Driver::HandleReceivedData);
-  com_.connect(port, baudrate);
+  com_.RegisterCallback(this, &Driver::HandleReceivedData);
+  com_.Connect(port, baudrate);
 }
 
-Driver::~Driver() { com_.close(); }
+Driver::~Driver() { com_.Close(); }
 
 void Driver::HandleReceivedData(char* data, int length) {
   for (int i = 0; i < length; ++i) {
@@ -46,7 +46,7 @@ void Driver::SendCommand(const uint16_t& command, const uint8_t* data) {
 
   uint8_t data_out[data_length + 15];
   int length = protocol_.GenerateFrame(command, data, 1, data_out);
-  com_.write((char*)data_out, length);
+  com_.Write((char*)data_out, length);
   sleep(1);
 }
 
