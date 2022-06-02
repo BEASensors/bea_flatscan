@@ -27,9 +27,18 @@ void Driver::HandleReceivedData(char* data, int length) {
 void Driver::ParseDataFrame(DataFrame& frame) {
   const uint16_t command = frame.command();
   const uint8_t* data = frame.data();
+  const uint16_t length = frame.length();
   switch (command) {
     case CommandFromSensor::MDI:
       ROS_INFO("Received MDI message");
+      laser_.length = length - 9;
+      laser_.angle_min = 0.;
+      laser_.angle_max = 108. / 180. * M_PI;
+      laser_.angle_increment = 0.18 / 180. * M_PI;
+      for (int i = 9; i < length - 1; i += 2) {
+        const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        laser_.ranges[i - 9 / 2] = static_cast<float>(range_in_mm) * 0.001;
+      }
       break;
     default:
       break;
