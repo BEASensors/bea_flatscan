@@ -135,6 +135,7 @@ bool Protocol::ExtractData(const uint8_t& byte) {
     return false;
   }
 
+  ROS_INFO("Received data length: %d", static_cast<int>(index));
   index = 0;
   return true;
 }

@@ -15,7 +15,32 @@ struct Laser {
 
   Laser() : ranges(new float[400]) {}
   Laser(const int& l) : ranges(new float[l]) {}
+  Laser(const Laser& other) {
+    length = other.length;
+    angle_min = other.angle_min;
+    angle_max = other.angle_max;
+    angle_increment = other.angle_increment;
+    ranges = new float[other.length];
+    std::copy(other.ranges, other.ranges + other.length, ranges);
+  }
   ~Laser() { delete[] ranges; }
+
+  Laser& operator=(const Laser& other) {
+    if (this == &other) {
+      return *this;
+    }
+
+    if (ranges) {
+      delete[] ranges;
+      ranges = nullptr;
+    }
+
+    ranges = new float[other.length];
+    length = other.length;
+    std::copy(other.ranges, other.ranges + other.length, ranges);
+
+    return *this;
+  }
 };
 
 class Driver {

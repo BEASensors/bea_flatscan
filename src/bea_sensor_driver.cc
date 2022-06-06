@@ -29,17 +29,20 @@ void Driver::ParseDataFrame(DataFrame& frame) {
   const uint8_t* data = frame.data();
   const uint16_t length = frame.length();
   switch (command) {
-    case CommandFromSensor::MDI:
-      ROS_INFO("Received MDI message");
-      laser_.length = length - 9;
+    case CommandFromSensor::MDI: {
       laser_.angle_min = 0.;
       laser_.angle_max = 108. / 180. * M_PI;
-      laser_.angle_increment = 0.18 / 180. * M_PI;
+      laser_.angle_increment = laser_.angle_max / 400;
+      int index{0};
       for (int i = 9; i < length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
-        laser_.ranges[i - 9 / 2] = static_cast<float>(range_in_mm) * 0.001;
+        laser_.ranges[index++] = static_cast<float>(range_in_mm) * 0.001;
+        // ROS_INFO("i = %d, range = %d", i, static_cast<int>(range_in_mm));
+        // ROS_INFO("range = %f", laser_.ranges[index - 1]);
       }
-      break;
+      ROS_INFO("Received MDI message with %d ranges", index);
+      laser_.length = index;
+    } break;
     default:
       break;
   }

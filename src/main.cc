@@ -20,6 +20,10 @@ int main(int argc, char** argv) {
       scan.angle_min = laser.angle_min;
       scan.angle_max = laser.angle_max;
       scan.angle_increment = laser.angle_increment;
+      scan.range_min = 0.;
+      scan.range_max = 8.;
+      // scan.scan_time = 1. / 23.25;
+      // scan.time_increment = 1. / 23.25 / 400;
       for (int i = 0; i < laser.length; ++i) {
         scan.ranges.push_back(laser.ranges[i]);
       }
