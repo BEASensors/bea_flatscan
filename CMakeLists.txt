@@ -8,6 +8,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
+  message_generation
+)
+
+add_service_files(
+  FILES
+  SetParameter.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 catkin_package()

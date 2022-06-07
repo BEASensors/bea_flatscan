@@ -4,6 +4,13 @@
 
 namespace bea_sensors {
 
+constexpr uint16_t kFrameMinimalLength{15};  // 11(SYNC) + 2(CMD) + 2(CHK)
+constexpr uint16_t kSyncHeadLength{5};
+constexpr uint16_t kSyncTailLength{4};
+
+const uint8_t* const kSyncHead{new uint8_t[kSyncHeadLength]{0xbe, 0xa0, 0x12, 0x34, 0x02}};
+const uint8_t* const kSyncTail{new uint8_t[kSyncTailLength]{0x02, 0x00, 0x00, 0x00}};
+
 enum CommandToSensor {
   SET_BAUDRATE = (0xc3 << 8 | 0x51),
   GET_MEASUREMENTS = (0xc3 << 8 | 0x5b),
@@ -30,7 +37,7 @@ class DataFrame {
  public:
   DataFrame() { data_ = nullptr; }
 
-  DataFrame(int command, uint8_t* data, int length) {
+  DataFrame(uint16_t command, uint8_t* data, uint16_t length) {
     data_ = new uint8_t[length];
     length_ = length;
     command_ = command;
@@ -81,12 +88,12 @@ class DataFrame {
 
 class Protocol {
  public:
-  Protocol(int buffer_size);
+  Protocol(const uint16_t& buffer_size);
   Protocol();
   ~Protocol();
 
   bool GetLatestFrame(DataFrame& frame) { return queue_.pop(frame); }
-  int GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out);
+  uint16_t GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out);
   int InsertByte(const uint8_t& byte);
 
  private:
@@ -105,8 +112,6 @@ class Protocol {
   };
 
   const uint16_t max_buffer_size_ = 10000;
-  const std::array<uint8_t, 5> sync_head_{0xbe, 0xa0, 0x12, 0x34, 0x02};
-  const std::array<uint8_t, 4> sync_tail_{0x02, 0x00, 0x00, 0x00};
 
   Field field_ = Field::SYNC;
   uint16_t data_length_ = 0;

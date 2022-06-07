@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 
 <launch>
-  <group ns="flat_scan">
-    <node name="flat_scan" pkg="bea_sensors" type="flat_scan" output="screen">
-      <param name="port" value="/dev/ttyUSB0"/>
-      <param name="baudrate" value="921600"/>
-      <param name="detection_field_mode" value="HD"/>
-      <param name="first_angle" value="0"/>       <!-- in degrees-->
-      <param name="last_angle" value="108"/>      <!-- in degrees-->
-      <param name="min_range" value="0"/>         <!-- in meters -->
-      <param name="max_range" value="8"/>         <!-- in meters -->
+  <node name="flat_scan" pkg="bea_sensors" type="flat_scan" output="screen">
+    <param name="port" value="/dev/ttyUSB0"/>
+    <param name="baudrate" value="921600"/>
+    <param name="detection_field_mode" value="HD"/>
+    <param name="first_angle" value="0"/>       <!-- in degrees-->
+    <param name="last_angle" value="108"/>      <!-- in degrees-->
+    <param name="min_range" value="0"/>         <!-- in meters -->
+    <param name="max_range" value="8"/>         <!-- in meters -->
 
-      <param name="frame_id" value="laser_link"/>
-      <param name="topic_name" value="/flat_scan"/>
-      <param name="loop_rate" value="10"/>
-    </node>
-  </group>
+    <param name="frame_id" value="laser_link"/>
+    <param name="topic_name" value="/flat_scan"/>
+    <param name="loop_rate" value="10"/>
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz"/>
 </launch>
