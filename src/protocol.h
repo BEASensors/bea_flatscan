@@ -85,7 +85,7 @@ class Protocol {
   Protocol();
   ~Protocol();
 
-  bool GetReceivedFrame(DataFrame& frame) { return queue_.pop(frame); }
+  bool GetLatestFrame(DataFrame& frame) { return queue_.pop(frame); }
   int GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out);
   int InsertByte(const uint8_t& byte);
 
@@ -112,7 +112,7 @@ class Protocol {
   uint16_t data_length_ = 0;
   uint16_t command_ = 0;
   uint16_t checksum_ = 0;
-  uint8_t* data_;
+  uint8_t* data_ = nullptr;
 
   boost::lockfree::spsc_queue<DataFrame, boost::lockfree::capacity<100>> queue_;
 };

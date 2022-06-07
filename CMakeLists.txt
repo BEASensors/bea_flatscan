@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(bea_sensors)
+cmake_minimum_required(VERSION 3.0)
+project(bea_sensors VERSION 1.0.0)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 14)
@@ -16,16 +16,16 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(bea_sensor_driver
-  src/main.cc
-  src/bea_sensor_driver.cc
+add_executable(flat_scan
+  src/demo.cc
+  src/flat_scan.cc
   src/protocol.cc
 )
 
-add_dependencies(bea_sensor_driver
+add_dependencies(flat_scan
 	${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(bea_sensor_driver
+target_link_libraries(flat_scan
   ${catkin_LIBRARIES}
 )

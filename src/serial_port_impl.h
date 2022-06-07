@@ -34,7 +34,7 @@ int SerialPort<cInstance>::Connect(std::string port, int baud) {
   baudrate_ = baud;
   is_running_ = true;
 
-  ROS_INFO("Creating serial port data receiving thread");
+  ROS_INFO("Creating data receiving thread");
   if (pthread_create(&receiving_thread_, nullptr, ReceiverRoutine, (void*)this)) {
     return -1;
   }
@@ -71,7 +71,7 @@ void* SerialPort<cInstance>::ReceiverRoutine(void* arg) {
       port->serial_fd_ = open(port->port_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
       if (port->serial_fd_ < 0) {
         ++retries;
-        if (retries > 30) {
+        if (retries > 10) {
           ROS_ERROR("Cannot open %s, please check", port->port_.c_str());
           return nullptr;
         }
