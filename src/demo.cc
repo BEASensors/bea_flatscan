@@ -22,12 +22,12 @@ int main(int argc, char** argv) {
   nh.param("loop_rate", loop_rate, static_cast<float>(10.));
   ros::Rate rate(loop_rate);
   while (ros::ok()) {
-    const bea_sensors::LaserData& data{flat_scan.laser_data()};
-    if (data.length == 0) {
-      ros::spinOnce();
-      rate.sleep();
-      continue;
-    }
+    // const bea_sensors::LaserData& data{flat_scan.laser_data()};
+    // if (data.length == 0) {
+    //   ros::spinOnce();
+    //   rate.sleep();
+    //   continue;
+    // }
 
     // scan.header.stamp = ros::Time::now();
     // scan.ranges.clear();

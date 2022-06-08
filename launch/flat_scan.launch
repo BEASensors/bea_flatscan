@@ -15,5 +15,5 @@
     <param name="loop_rate" value="10"/>
   </node>
 
-  <node name="rviz" pkg="rviz" type="rviz"/>
+  <!-- <node name="rviz" pkg="rviz" type="rviz"/> -->
 </launch>

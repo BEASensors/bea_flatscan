@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_service_files(
   FILES
-  SetParameter.srv
+  Configure.srv
 )
 
 generate_messages(

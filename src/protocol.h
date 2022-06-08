@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/lockfree/spsc_queue.hpp>
+#include <unordered_map>
 
 namespace bea_sensors {
 
@@ -10,6 +11,8 @@ constexpr uint16_t kSyncTailLength{4};
 
 const uint8_t* const kSyncHead{new uint8_t[kSyncHeadLength]{0xbe, 0xa0, 0x12, 0x34, 0x02}};
 const uint8_t* const kSyncTail{new uint8_t[kSyncTailLength]{0x02, 0x00, 0x00, 0x00}};
+
+const std::unordered_map<std::string, uint8_t> kColorToNumberMap{{"off", 0}, {"red", 1}, {"green", 2}, {"orange", 3}};
 
 enum CommandToSensor {
   SET_BAUDRATE = (0xc3 << 8 | 0x51),
