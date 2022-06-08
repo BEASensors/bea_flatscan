@@ -35,7 +35,7 @@ uint16_t Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, c
 
   std::cout << "frame:" << std::endl;
   for (uint16_t i = 0; i < index; ++i) {
-    std::cout << data_out[i] << " ";
+    std::cout << std::hex << (static_cast<int>(data_out[i]) & 0xff) << " ";
   }
   std::cout << std::endl;
 
@@ -105,7 +105,6 @@ bool Protocol::ExtractSync(const uint8_t& byte) {
   } else {
     index = 0;
     data_length_ -= kFrameMinimalLength;
-    // ROS_INFO("Received new frame with data length %d", data_length_);
     return true;
   }
 }
@@ -120,7 +119,6 @@ bool Protocol::ExtractCommand(const uint8_t& byte) {
   }
 
   index = 0;
-  // ROS_INFO("Received valid command: %x", command_);
   return true;
 }
 
@@ -132,7 +130,6 @@ bool Protocol::ExtractData(const uint8_t& byte) {
     return false;
   }
 
-  // ROS_INFO("Received data length: %d", static_cast<int>(index));
   index = 0;
   return true;
 }
@@ -147,7 +144,6 @@ bool Protocol::ExtractChecksum(const uint8_t& byte) {
   }
 
   index = 0;
-  // ROS_INFO("Received valid checksum: %x", checksum_);
   return true;
 
   const uint16_t frame_length{static_cast<uint16_t>(data_length_ + kFrameMinimalLength - 2)};

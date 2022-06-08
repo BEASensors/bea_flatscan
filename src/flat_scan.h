@@ -63,6 +63,10 @@ class FlatScan {
  private:
   bool Initialize();
   bool HandleConfiguration(Configure::Request& req, Configure::Response& res);
+  void HandleSetBaudrate(Configure::Request& req, Configure::Response& res);
+  void HandleGetMeasurements(Configure::Request& req, Configure::Response& res);
+  void HandleSetParameters(Configure::Request& req, Configure::Response& res);
+  void HandleSetLed(Configure::Request& req, Configure::Response& res);
 
   void HandleReceivedData(char* data, int length);
   void ParseDataFrame(DataFrame& frame);
