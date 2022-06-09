@@ -1,5 +1,5 @@
-string name
-string subname
+string command
+string subcommand
 string value
 ---
 bool success

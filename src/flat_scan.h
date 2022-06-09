@@ -73,11 +73,14 @@ class FlatScan {
   void SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data);
 
  private:
-  int number_of_spots_ = 0;
+  uint8_t information_ = 0;
+  uint16_t number_of_spots_ = 0;
   float resolution_ = 0., refresh_period_ = 0.;
   float first_angle_ = 0., last_angle_ = 0.;
   float min_range_ = 0., max_range_ = 0.;
   std::string frame_id_;
+
+  uint8_t* parameters_ = nullptr;
 
   ros::NodeHandle nh_;
   ros::Publisher laser_scan_publisher_;

@@ -12,7 +12,6 @@
 
     <param name="frame_id" value="laser_link"/>
     <param name="topic_name" value="/flat_scan"/>
-    <param name="loop_rate" value="10"/>
   </node>
 
   <!-- <node name="rviz" pkg="rviz" type="rviz"/> -->
