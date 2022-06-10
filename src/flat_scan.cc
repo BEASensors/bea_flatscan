@@ -163,19 +163,22 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
     res.description = req.command + " " + req.subcommand;
     return;
   }
-  uint8_t* data{new uint8_t[4]};
+
   const size_t pos{req.value.find(" ")};
   if (req.subcommand == "set" && pos == req.value.npos) {
+    uint8_t* data{new uint8_t[2]};
     const std::string color1{req.value};
     data[0] = 1;
     if (kColorMap.find(color1) != kColorMap.end()) {
       data[1] = kColorMap.at(color1);
-      data[2] = 0;
-      data[3] = 0;
+      SendMessage(SET_LED, 2, data);
     } else {
       res.success = false;
     }
+    delete[] data;
+    data = nullptr;
   } else if (req.subcommand == "blink" && pos != req.value.npos) {
+    uint8_t* data{new uint8_t[4]};
     data[0] = 2;
     const std::string color1{req.value.substr(0, pos)};
     if (kColorMap.find(color1) != kColorMap.end()) {
@@ -191,20 +194,17 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
       data[3] = frequency;
       if (kColorMap.find(color2) != kColorMap.end()) {
         data[2] = kColorMap.at(color2);
+        SendMessage(SET_LED, 4, data);
       } else {
         res.success = false;
       }
     }
+    delete[] data;
+    data = nullptr;
   } else {
     res.success = false;
     res.description = "Wrong message: " + req.command + " " + req.subcommand + " " + req.value;
   }
-
-  if (res.success) {
-    SendMessage(SET_LED, 4, data);
-  }
-  delete[] data;
-  data = nullptr;
 }
 
 void FlatScan::HandleReceivedData(char* data, int length) {
@@ -248,7 +248,7 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
           laser_scan_publisher_.publish(message);
         } break;
         case 1: {
-          for (int i = 809; i < length - 1; i += 2) {
+          for (int i = 9; i < length - 1; i += 2) {
             const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
             message.intensities.push_back(static_cast<float>(intensity));
           }

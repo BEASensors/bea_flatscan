@@ -17,7 +17,8 @@ const std::unordered_map<std::string, uint8_t> kParameterMap{/*{"temperature", 1
 const std::unordered_map<std::string, uint8_t> kInformationParameterMap{{"distances", 0}, {"remissions", 1}, {"distances and remissions", 2}};
 const std::unordered_map<std::string, uint8_t> kOptimizationParameterMap;
 const std::unordered_map<std::string, uint8_t> kAveragingParameterMap;
-const std::unordered_map<std::string, uint8_t> kBaudrateMap{{"57600", 0}, {"115200", 1}, {"230400", 2}, {"460800", 3}, {"921600", 4}};
+const std::unordered_map<std::string, uint8_t> kBaudrateMap{{"57600", 0}, {"115200", 1}, {"230400", 2}, {"460800", 3}, {"921600", 4},
+                                                            {"0", 0},     {"1", 1},      {"2", 2},      {"3", 3},      {"4", 4}};
 const std::unordered_map<std::string, uint8_t> kColorMap{{"off", 0}, {"red", 1}, {"green", 2}, {"orange", 3}};
 
 enum CommandToSensor {
