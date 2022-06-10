@@ -3,6 +3,9 @@
 #include <angles/angles.h>
 #include <sensor_msgs/LaserScan.h>
 
+#include "bea_sensors/Emergency.h"
+#include "bea_sensors/Heartbeat.h"
+
 namespace bea_sensors {
 
 FlatScan::FlatScan(const ros::NodeHandle& nh_) : nh_(nh_), parameters_(new uint8_t[22]{0}) { Initialize(); }
@@ -48,6 +51,8 @@ bool FlatScan::Initialize() {
   nh_.param("topic_name", topic_name, std::string("/scan"));
 
   laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(topic_name, 1, this);
+  heartbeat_publisher_ = nh_.advertise<Heartbeat>("/heartbeat", 1, this);
+  emergency_publisher_ = nh_.advertise<Emergency>("/emergency", 1, this);
   configuration_server_ = nh_.advertiseService("configure", &FlatScan::HandleConfiguration, this);
 
   com_.RegisterCallback(this, &FlatScan::HandleReceivedData);
@@ -317,14 +322,22 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
       ROS_INFO("averaging_setting: %i", averaging_setting);
     } break;
     case CommandFromSensor::HEARTBEAT: {
-      const uint16_t heartbeat_count{static_cast<uint16_t>(data[4] | data[5] << 8)};
-      // ROS_INFO("Heartbeat count: %i", heartbeat_count));
+      Heartbeat message;
+      message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
+      if (heartbeat_publisher_.getNumSubscribers() > 0) {
+        heartbeat_publisher_.publish(message);
+      }
+      // ROS_INFO("Heartbeat count: %i", message.count));
     } break;
     case CommandFromSensor::EMERGENCY: {
-      const uint16_t emergency_count{static_cast<uint16_t>(data[4] | data[5] << 8)};
-      const uint16_t rs485_error_code{static_cast<uint16_t>(data[6] | data[7] << 8)};
-      const uint16_t sensor_error_code{static_cast<uint16_t>(data[8] | data[9] << 8)};
-      ROS_INFO("Emergency count: %i, error code: %i %i", emergency_count, rs485_error_code, sensor_error_code);
+      Emergency message;
+      message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
+      message.rs485_error = static_cast<uint16_t>(data[6] | data[7] << 8);
+      message.sensor_error = static_cast<uint16_t>(data[8] | data[9] << 8);
+      if (emergency_publisher_.getNumSubscribers() > 0) {
+        emergency_publisher_.publish(message);
+      }
+      ROS_INFO("Emergency count: %i, error code: %i %i", message.count, message.rs485_error, message.sensor_error);
     } break;
     case CommandToSensor::STORE_PARAMETERS: {
       ROS_INFO("Store parameters succeeded");

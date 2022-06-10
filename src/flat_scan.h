@@ -9,52 +9,6 @@
 
 namespace bea_sensors {
 
-// constexpr uint16_t kDefaultLaserDataLength{400};
-
-// struct LaserData {
-//   uint16_t length = 0;
-//   float* ranges = nullptr;
-//   float* intensities = nullptr;
-
-//   LaserData() : ranges(new float[kDefaultLaserDataLength]), intensities(new float[kDefaultLaserDataLength]) {}
-//   LaserData(const uint16_t& l) : ranges(new float[l]), intensities(new float[l]) {}
-//   LaserData(const LaserData& other) {
-//     length = other.length;
-//     ranges = new float[other.length];
-//     intensities = new float[other.length];
-//     std::copy(other.ranges, other.ranges + other.length, ranges);
-//     std::copy(other.intensities, other.intensities + other.length, intensities);
-//   }
-//   ~LaserData() {
-//     delete[] ranges;
-//     delete[] intensities;
-//   }
-
-//   LaserData& operator=(const LaserData& other) {
-//     if (this == &other) {
-//       return *this;
-//     }
-
-//     length = other.length;
-
-//     if (ranges) {
-//       delete[] ranges;
-//       ranges = nullptr;
-//     }
-//     ranges = new float[other.length];
-//     std::copy(other.ranges, other.ranges + other.length, ranges);
-
-//     if (intensities) {
-//       delete[] intensities;
-//       intensities = nullptr;
-//     }
-//     intensities = new float[other.length];
-//     std::copy(other.intensities, other.intensities + other.length, intensities);
-
-//     return *this;
-//   }
-// };
-
 class FlatScan {
  public:
   FlatScan(const ros::NodeHandle& nh);
@@ -84,6 +38,8 @@ class FlatScan {
 
   ros::NodeHandle nh_;
   ros::Publisher laser_scan_publisher_;
+  ros::Publisher emergency_publisher_;
+  ros::Publisher heartbeat_publisher_;
   ros::ServiceServer configuration_server_;
 
   SerialPort<FlatScan> com_;

@@ -7,8 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  std_msgs
   sensor_msgs
   message_generation
+)
+
+add_message_files(
+  FILES
+  Emergency.msg
+  Heartbeat.msg
 )
 
 add_service_files(
@@ -21,7 +28,9 @@ generate_messages(
   std_msgs
 )
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS message_runtime
+)
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
