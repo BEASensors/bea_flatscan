@@ -8,13 +8,9 @@
 
 namespace bea_sensors {
 
-FlatScan::FlatScan(const ros::NodeHandle& nh_) : nh_(nh_), parameters_(new uint8_t[22]{0}) { Initialize(); }
+FlatScan::FlatScan(const ros::NodeHandle& nh_) : nh_(nh_) { Initialize(); }
 
-FlatScan::~FlatScan() {
-  com_.Close();
-  delete[] parameters_;
-  parameters_ = nullptr;
-}
+FlatScan::~FlatScan() { com_.Close(); }
 
 bool FlatScan::Initialize() {
   std::string port;
@@ -29,17 +25,17 @@ bool FlatScan::Initialize() {
     ROS_INFO("FlatScan works in HD mode, loading HD configurations");
     resolution_ = 0.18 + 0.09;    // in degrees
     refresh_period_ = 43 * 1e-3;  // in seconds
-    number_of_spots_ = 400;
+    parameters_.number_of_spots = 400;
   } else if (detection_field_mode == "HS") {
     ROS_INFO("FlatScan works in HS mode, loading HS configurations");
     resolution_ = 0.74 + 0.09;       // in degrees
     refresh_period_ = 10.75 * 1e-3;  // in seconds
-    number_of_spots_ = 100;
+    parameters_.number_of_spots = 100;
   } else {
     ROS_WARN("FlatScan works in %s(UNKNOWN) mode, loading HD configurations by default", detection_field_mode.c_str());
     resolution_ = 0.18 + 0.09;    // in degrees
     refresh_period_ = 43 * 1e-3;  // in seconds
-    number_of_spots_ = 400;
+    parameters_.number_of_spots = 400;
   }
   nh_.param("first_angle", first_angle_, static_cast<float>(0.));
   nh_.param("last_angle", last_angle_, static_cast<float>(108.));
@@ -145,19 +141,27 @@ void FlatScan::HandleSetParameters(Configure::Request& req, Configure::Response&
     res.description = "no " + req.subcommand;
     return;
   }
-  parameters_[1] = 0x01;
-  parameters_[2] = 0x02;
-  parameters_[3] = 0x01;
-  parameters_[8] = 0x90;
-  parameters_[9] = 0x01;
-  parameters_[16] = 0x30;
-  parameters_[17] = 0x2a;
-  parameters_[18] = 0x01;
-  parameters_[19] = 0x05;
-  parameters_[20] = 0x01;
 
-  parameters_[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
-  SendMessage(SET_PARAMETERS, 22, parameters_);
+  uint8_t* data{new uint8_t[22]{0}};
+  data[1] = parameters_.temperature;
+  data[2] = parameters_.information;
+  data[3] = parameters_.mode;
+  data[4] = parameters_.optimization;
+  data[8] = static_cast<uint8_t>(parameters_.number_of_spots & 0xff);
+  data[9] = static_cast<uint8_t>((parameters_.number_of_spots & 0xff00) >> 8);
+  data[14] = static_cast<uint8_t>(parameters_.angle_first & 0xff);
+  data[15] = static_cast<uint8_t>((parameters_.angle_first & 0xff00) >> 8);
+  data[16] = static_cast<uint8_t>(parameters_.angle_last & 0xff);
+  data[17] = static_cast<uint8_t>((parameters_.angle_last & 0xff00) >> 8);
+  data[18] = parameters_.counter;
+  data[19] = parameters_.heartbeat_period;
+  data[20] = parameters_.facet;
+  data[21] = parameters_.averaging;
+
+  data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
+  SendMessage(SET_PARAMETERS, 22, data);
+  delete[] data;
+  data = nullptr;
 }
 
 void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
@@ -212,6 +216,16 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
   }
 }
 
+void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
+  uint8_t data_out[data_length + kFrameMinimalLength];
+  uint16_t length = protocol_.GenerateFrame(command, data, data_length, data_out);
+  if (length < kFrameMinimalLength) {
+    return;
+  }
+  com_.Write((char*)data_out, length);
+  usleep(5000);
+}
+
 void FlatScan::HandleReceivedData(char* data, int length) {
   for (int i = 0; i < length; ++i) {
     if (protocol_.InsertByte(data[i]) > 0) {
@@ -230,114 +244,23 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
   const uint8_t* data = frame.data();
   const uint16_t length = frame.length();
   switch (command) {
-    case CommandToSensor::SET_BAUDRATE: {
-      ROS_INFO("Set baudrate succeeded: %i", data[0]);
-    } break;
     case CommandFromSensor::MDI: {
-      sensor_msgs::LaserScan message;
-      message.header.stamp = ros::Time::now();
-      message.header.frame_id = frame_id_;
-      message.angle_min = angles::from_degrees(first_angle_);
-      message.angle_max = angles::from_degrees(last_angle_);
-      message.angle_increment = angles::from_degrees(resolution_);
-      message.range_min = min_range_;
-      message.range_max = max_range_;
-      message.scan_time = refresh_period_;
-      message.time_increment = refresh_period_ / number_of_spots_;
-      switch (information_) {
-        case 0: {
-          for (int i = 9; i < length - 1; i += 2) {
-            const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
-            message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
-          }
-          laser_scan_publisher_.publish(message);
-        } break;
-        case 1: {
-          for (int i = 9; i < length - 1; i += 2) {
-            const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
-            message.intensities.push_back(static_cast<float>(intensity));
-          }
-          laser_scan_publisher_.publish(message);
-        } break;
-        case 2: {
-          for (int i = 9; i < 808; i += 2) {
-            const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
-            message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
-          }
-          for (int i = 809; i < length - 1; i += 2) {
-            const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
-            message.intensities.push_back(static_cast<float>(intensity));
-          }
-          laser_scan_publisher_.publish(message);
-        } break;
-        default:
-          break;
-      }
+      ParseMdiMessage(data, length);
     } break;
     case CommandFromSensor::SEND_IDENTITY: {
-      const uint32_t product_part_number{static_cast<uint32_t>(data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24)};
-      const uint8_t software_version{data[4]};
-      const uint8_t software_revision{data[5]};
-      const uint8_t software_prototype{data[6]};
-      const uint32_t serial_number{static_cast<uint32_t>(data[7] | data[8] << 8 | data[9] << 16 | data[10] << 24)};
-      ROS_INFO("product_part_number: %i", product_part_number);
-      ROS_INFO("software_version: %i", software_version);
-      ROS_INFO("software_revision: %i", software_revision);
-      ROS_INFO("software_prototype: %i", software_prototype);
-      ROS_INFO("serial_number: %i", serial_number);
+      ParseSendIdentityMessage(data, length);
     } break;
     case CommandFromSensor::SEND_PARAMETERS: {
-      const uint32_t verification_code{static_cast<uint32_t>(data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24)};
-      const uint16_t charge{static_cast<uint16_t>(data[4] | data[5] << 8)};
-      const uint8_t temperature_enabled{data[7]};
-      information_ = data[8];
-      const uint8_t detection_field_mode{data[9]};
-      if (detection_field_mode == 0) {
-        resolution_ = 0.74 + 0.09;
-        refresh_period_ = 10.75 * 1e-3;
-      } else if (detection_field_mode == 1) {
-        resolution_ = 0.18 + 0.09;
-        refresh_period_ = 43 * 1e-3;
-      }
-      const uint8_t optimization{data[10]};
-      number_of_spots_ = static_cast<uint16_t>(data[14] | data[15] << 8);
-      first_angle_ = static_cast<float>(data[20] | data[21] << 8) * 1e-2;
-      last_angle_ = static_cast<float>(data[22] | data[23] << 8) * 1e-2;
-      const uint8_t counter_enabled{data[24]};
-      const uint8_t heartbeat_period{data[25]};
-      const uint8_t facet_enabled{data[26]};
-      const uint8_t averaging_setting{data[27]};
-      ROS_INFO("verification_code: %i", verification_code);
-      ROS_INFO("charge: %i", charge);
-      ROS_INFO("temperature_enabled: %i", temperature_enabled);
-      ROS_INFO("information: %i", information_);
-      ROS_INFO("detection_field_mode: %i", detection_field_mode);
-      ROS_INFO("optimization: %i", optimization);
-      ROS_INFO("number_of_spots: %i", number_of_spots_);
-      ROS_INFO("angle_first: %f", first_angle_);
-      ROS_INFO("angle_last: %f", last_angle_);
-      ROS_INFO("counter_enabled: %i", counter_enabled);
-      ROS_INFO("heartbeat_period: %i", heartbeat_period);
-      ROS_INFO("facet_enabled: %i", facet_enabled);
-      ROS_INFO("averaging_setting: %i", averaging_setting);
+      ParseSendParametersMessage(data, length);
     } break;
     case CommandFromSensor::HEARTBEAT: {
-      Heartbeat message;
-      message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
-      if (heartbeat_publisher_.getNumSubscribers() > 0) {
-        heartbeat_publisher_.publish(message);
-      }
-      // ROS_INFO("Heartbeat count: %i", message.count));
+      ParseHeartbeatMessage(data, length);
     } break;
     case CommandFromSensor::EMERGENCY: {
-      Emergency message;
-      message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
-      message.rs485_error = static_cast<uint16_t>(data[6] | data[7] << 8);
-      message.sensor_error = static_cast<uint16_t>(data[8] | data[9] << 8);
-      if (emergency_publisher_.getNumSubscribers() > 0) {
-        emergency_publisher_.publish(message);
-      }
-      ROS_INFO("Emergency count: %i, error code: %i %i", message.count, message.rs485_error, message.sensor_error);
+      ParseEmergencyMessage(data, length);
+    } break;
+    case CommandToSensor::SET_BAUDRATE: {
+      ROS_INFO("Set baudrate succeeded: %i", data[0]);
     } break;
     case CommandToSensor::STORE_PARAMETERS: {
       ROS_INFO("Store parameters succeeded");
@@ -360,14 +283,118 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
   }
 }
 
-void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
-  uint8_t data_out[data_length + kFrameMinimalLength];
-  uint16_t length = protocol_.GenerateFrame(command, data, data_length, data_out);
-  if (length < kFrameMinimalLength) {
-    return;
+void FlatScan::ParseMdiMessage(const uint8_t* data, const int& length) {
+  sensor_msgs::LaserScan message;
+  message.header.stamp = ros::Time::now();
+  message.header.frame_id = frame_id_;
+  message.angle_min = angles::from_degrees(first_angle_);
+  message.angle_max = angles::from_degrees(last_angle_);
+  message.angle_increment = angles::from_degrees(resolution_);
+  message.range_min = min_range_;
+  message.range_max = max_range_;
+  message.scan_time = refresh_period_;
+  message.time_increment = refresh_period_ / parameters_.number_of_spots;
+  switch (parameters_.information) {
+    case 0: {
+      for (int i = 9; i < length - 1; i += 2) {
+        const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
+      }
+    } break;
+    case 1: {
+      for (int i = 9; i < length - 1; i += 2) {
+        const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        message.intensities.push_back(static_cast<float>(intensity));
+      }
+    } break;
+    case 2: {
+      for (int i = 9; i < 808; i += 2) {
+        const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
+      }
+      for (int i = 809; i < length - 1; i += 2) {
+        const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        message.intensities.push_back(static_cast<float>(intensity));
+      }
+    } break;
+    default:
+      return;
   }
-  com_.Write((char*)data_out, length);
-  usleep(5000);
+  laser_scan_publisher_.publish(message);
+}
+
+void FlatScan::ParseSendIdentityMessage(const uint8_t* data, const int& length) {
+  const uint32_t product_part_number{static_cast<uint32_t>(data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24)};
+  const uint8_t software_version{data[4]};
+  const uint8_t software_revision{data[5]};
+  const uint8_t software_prototype{data[6]};
+  const uint32_t serial_number{static_cast<uint32_t>(data[7] | data[8] << 8 | data[9] << 16 | data[10] << 24)};
+  ROS_INFO("product_part_number: %i", product_part_number);
+  ROS_INFO("software_version: %i", software_version);
+  ROS_INFO("software_revision: %i", software_revision);
+  ROS_INFO("software_prototype: %i", software_prototype);
+  ROS_INFO("serial_number: %i", serial_number);
+}
+
+void FlatScan::ParseSendParametersMessage(const uint8_t* data, const int& length) {
+  const uint32_t verification_code{static_cast<uint32_t>(data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24)};
+  const uint16_t charge{static_cast<uint16_t>(data[4] | data[5] << 8)};
+
+  parameters_.temperature = data[7];
+  parameters_.information = data[8];
+  parameters_.mode = data[9];
+  parameters_.optimization = data[10];
+  parameters_.number_of_spots = static_cast<uint16_t>(data[14] | data[15] << 8);
+  parameters_.angle_first = data[20] | data[21] << 8;
+  parameters_.angle_last = data[22] | data[23] << 8;
+  parameters_.counter = data[24];
+  parameters_.heartbeat_period = data[25];
+  parameters_.facet = data[26];
+  parameters_.averaging = data[27];
+
+  if (parameters_.mode == 0) {
+    resolution_ = 0.74 + 0.09;
+    refresh_period_ = 10.75 * 1e-3;
+  } else if (parameters_.mode == 1) {
+    resolution_ = 0.18 + 0.09;
+    refresh_period_ = 43 * 1e-3;
+  }
+  first_angle_ = static_cast<float>(parameters_.angle_first) * 1e-2;
+  last_angle_ = static_cast<float>(parameters_.angle_last) * 1e-2;
+
+  ROS_INFO("verification_code: %i", verification_code);
+  ROS_INFO("charge: %i", charge);
+  ROS_INFO("temperature_enabled: %i", parameters_.temperature);
+  ROS_INFO("information: %i", parameters_.information);
+  ROS_INFO("detection_field_mode: %i", parameters_.mode);
+  ROS_INFO("optimization: %i", parameters_.optimization);
+  ROS_INFO("number_of_spots: %i", parameters_.number_of_spots);
+  ROS_INFO("angle_first: %f", first_angle_);
+  ROS_INFO("angle_last: %f", last_angle_);
+  ROS_INFO("counter_enabled: %i", parameters_.counter);
+  ROS_INFO("heartbeat_period: %i", parameters_.heartbeat_period);
+  ROS_INFO("facet_enabled: %i", parameters_.facet);
+  ROS_INFO("averaging_setting: %i", parameters_.averaging);
+}
+
+void FlatScan::ParseHeartbeatMessage(const uint8_t* data, const int& length) {
+  Heartbeat message;
+  message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
+  if (heartbeat_publisher_.getNumSubscribers() > 0) {
+    heartbeat_publisher_.publish(message);
+  }
+  // ROS_INFO("Heartbeat count: %i", message.count));
+}
+
+void FlatScan::ParseEmergencyMessage(const uint8_t* data, const int& length) {
+  Emergency message;
+  message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
+  message.rs485_error = static_cast<uint16_t>(data[6] | data[7] << 8);
+  message.sensor_error = static_cast<uint16_t>(data[8] | data[9] << 8);
+  if (emergency_publisher_.getNumSubscribers() > 0) {
+    emergency_publisher_.publish(message);
+  }
+  ROS_INFO("Emergency count: %i, error code: %i %i", message.count, message.rs485_error, message.sensor_error);
 }
 
 }  // namespace bea_sensors

@@ -12,8 +12,14 @@ constexpr uint16_t kSyncTailLength{4};
 const uint8_t* const kSyncHead{new uint8_t[kSyncHeadLength]{0xbe, 0xa0, 0x12, 0x34, 0x02}};
 const uint8_t* const kSyncTail{new uint8_t[kSyncTailLength]{0x02, 0x00, 0x00, 0x00}};
 
-const std::unordered_map<std::string, uint8_t> kParameterMap{/*{"temperature", 1},*/ {"information", 2}, /*{"mode", 3},        {"optimization", 4},*/
-                                                             /*{"spots", 8},       {"angle_first", 14}, {"angle_last", 15}, {"averaging", 21}*/};
+const std::unordered_map<std::string, uint8_t> kParameterMap{{"temperature", 1},
+                                                             {"information", 2},
+                                                             {"mode", 3},
+                                                             {"optimization", 4},
+                                                             /*{"spots", 8},       {"angle_first", 14}, {"angle_last", 16},*/ {"counter", 18},
+                                                             {"heartbeat", 19},
+                                                             {"facet", 20},
+                                                             {"averaging", 21}};
 const std::unordered_map<std::string, uint8_t> kInformationParameterMap{{"distances", 0}, {"remissions", 1}, {"distances and remissions", 2}};
 const std::unordered_map<std::string, uint8_t> kOptimizationParameterMap;
 const std::unordered_map<std::string, uint8_t> kAveragingParameterMap;
