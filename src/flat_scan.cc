@@ -23,18 +23,21 @@ bool FlatScan::Initialize() {
 
   if (detection_field_mode == "HD") {
     ROS_INFO("FlatScan works in HD mode, loading HD configurations");
-    resolution_ = 0.18 + 0.09;    // in degrees
-    refresh_period_ = 43 * 1e-3;  // in seconds
+    parameters_.mode = 1;
+    resolution_ = kHighDensityResolution;         // in degrees
+    refresh_period_ = kHighDensityRefreshPeriod;  // in seconds
     parameters_.number_of_spots = 400;
   } else if (detection_field_mode == "HS") {
     ROS_INFO("FlatScan works in HS mode, loading HS configurations");
-    resolution_ = 0.74 + 0.09;       // in degrees
-    refresh_period_ = 10.75 * 1e-3;  // in seconds
+    parameters_.mode = 0;
+    resolution_ = kHighSpeedResolution;         // in degrees
+    refresh_period_ = kHighSpeedRefreshPeriod;  // in seconds
     parameters_.number_of_spots = 100;
   } else {
     ROS_WARN("FlatScan works in %s(UNKNOWN) mode, loading HD configurations by default", detection_field_mode.c_str());
-    resolution_ = 0.18 + 0.09;    // in degrees
-    refresh_period_ = 43 * 1e-3;  // in seconds
+    parameters_.mode = 1;
+    resolution_ = kHighDensityResolution;         // in degrees
+    refresh_period_ = kHighDensityRefreshPeriod;  // in seconds
     parameters_.number_of_spots = 400;
   }
   nh_.param("first_angle", first_angle_, static_cast<float>(0.));
@@ -43,12 +46,14 @@ bool FlatScan::Initialize() {
   nh_.param("max_range", max_range_, static_cast<float>(8.));
   nh_.param("frame_id", frame_id_, std::string("laser_link"));
 
-  std::string topic_name;
-  nh_.param("topic_name", topic_name, std::string("/scan"));
+  std::string scan_topic, heartbeat_topic, emergency_topic;
+  nh_.param("scan_topic", scan_topic, std::string("/scan"));
+  nh_.param("heartbeat_topic", heartbeat_topic, std::string("/heartbeat"));
+  nh_.param("emergency_topic", emergency_topic, std::string("/emergency"));
 
-  laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(topic_name, 1, this);
-  heartbeat_publisher_ = nh_.advertise<Heartbeat>("/heartbeat", 1, this);
-  emergency_publisher_ = nh_.advertise<Emergency>("/emergency", 1, this);
+  laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(scan_topic, 1, this);
+  heartbeat_publisher_ = nh_.advertise<Heartbeat>(heartbeat_topic, 1, this);
+  emergency_publisher_ = nh_.advertise<Emergency>(emergency_topic, 1, this);
   configuration_server_ = nh_.advertiseService("configure", &FlatScan::HandleConfiguration, this);
 
   com_.RegisterCallback(this, &FlatScan::HandleReceivedData);
@@ -158,7 +163,14 @@ void FlatScan::HandleSetParameters(Configure::Request& req, Configure::Response&
   data[20] = parameters_.facet;
   data[21] = parameters_.averaging;
 
-  data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
+  if (req.subcommand != "spots" && req.subcommand != "angle_first" && req.subcommand != "angle_last") {
+    data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
+  } else {
+    const uint16_t value{static_cast<uint16_t>(std::stoi(req.value))};
+    data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(value & 0xff);
+    data[kParameterMap.at(req.subcommand) + 1] = static_cast<uint8_t>((value & 0xff00) >> 8);
+  }
+
   SendMessage(SET_PARAMETERS, 22, data);
   delete[] data;
   data = nullptr;
@@ -366,11 +378,11 @@ void FlatScan::ParseSendParametersMessage(const uint8_t* data, const int& length
   parameters_.averaging = data[27];
 
   if (parameters_.mode == 0) {
-    resolution_ = 0.74 + 0.09;
-    refresh_period_ = 10.75 * 1e-3;
+    resolution_ = kHighSpeedResolution;
+    refresh_period_ = kHighSpeedRefreshPeriod;
   } else if (parameters_.mode == 1) {
-    resolution_ = 0.18 + 0.09;
-    refresh_period_ = 43 * 1e-3;
+    resolution_ = kHighDensityResolution;
+    refresh_period_ = kHighDensityRefreshPeriod;
   }
   first_angle_ = static_cast<float>(parameters_.angle_first) * 1e-2;
   last_angle_ = static_cast<float>(parameters_.angle_last) * 1e-2;

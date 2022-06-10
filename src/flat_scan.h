@@ -9,6 +9,11 @@
 
 namespace bea_sensors {
 
+constexpr float kHighDensityResolution{0.18 + 0.09};
+constexpr float kHighDensityRefreshPeriod{43 * 1e-3};
+constexpr float kHighSpeedResolution{0.74 + 0.09};
+constexpr float kHighSpeedRefreshPeriod{10.75 * 1e-3};
+
 struct Parameters {
   uint8_t temperature = 1;
   uint8_t information = 0;
