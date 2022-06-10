@@ -12,16 +12,6 @@ constexpr uint16_t kSyncTailLength{4};
 const uint8_t* const kSyncHead{new uint8_t[kSyncHeadLength]{0xbe, 0xa0, 0x12, 0x34, 0x02}};
 const uint8_t* const kSyncTail{new uint8_t[kSyncTailLength]{0x02, 0x00, 0x00, 0x00}};
 
-const std::unordered_map<std::string, uint8_t> kParameterMap{{"temperature", 1}, {"information", 2},  {"mode", 3},        {"optimization", 4},
-                                                             {"spots", 8},       {"angle_first", 14}, {"angle_last", 16}, {"counter", 18},
-                                                             {"heartbeat", 19},  {"facet", 20},       {"averaging", 21}};
-const std::unordered_map<std::string, uint8_t> kInformationParameterMap{{"distances", 0}, {"remissions", 1}, {"distances and remissions", 2}};
-const std::unordered_map<std::string, uint8_t> kOptimizationParameterMap;
-const std::unordered_map<std::string, uint8_t> kAveragingParameterMap;
-const std::unordered_map<std::string, uint8_t> kBaudrateMap{{"57600", 0}, {"115200", 1}, {"230400", 2}, {"460800", 3}, {"921600", 4},
-                                                            {"0", 0},     {"1", 1},      {"2", 2},      {"3", 3},      {"4", 4}};
-const std::unordered_map<std::string, uint8_t> kColorMap{{"off", 0}, {"red", 1}, {"green", 2}, {"orange", 3}};
-
 enum CommandToSensor {
   SET_BAUDRATE = (0xc3 << 8 | 0x51),
   GET_MEASUREMENTS = (0xc3 << 8 | 0x5b),

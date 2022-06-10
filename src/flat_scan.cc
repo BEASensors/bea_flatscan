@@ -209,9 +209,11 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
     }
 
     if (res.success) {
-      const size_t pos2{req.value.substr(pos + 1, req.value.size()).find(" ")};
-      const std::string color2{pos2 == req.value.npos ? req.value.substr(pos + 1, req.value.size()) : req.value.substr(pos + 1, pos2 - pos)};
-      const uint8_t frequency{static_cast<uint8_t>(pos2 == req.value.npos ? 1 : std::stoi(req.value.substr(pos2 + 1, req.value.size() - pos2)))};
+      const std::string substr{req.value.substr(pos + 1, req.value.size())};
+      const size_t pos2{substr.find(" ")};
+      const std::string color2{pos2 == substr.npos ? substr : substr.substr(0, pos2)};
+      const std::string frequency_str{substr.substr(pos2 + 1, substr.size() - pos2)};
+      const uint8_t frequency{static_cast<uint8_t>(pos2 == substr.npos ? 1 : std::stoi(frequency_str))};
       data[3] = frequency;
       if (kColorMap.find(color2) != kColorMap.end()) {
         data[2] = kColorMap.at(color2);
@@ -229,13 +231,18 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
 }
 
 void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
+  message_sent_ = false;
   uint8_t data_out[data_length + kFrameMinimalLength];
   uint16_t length = protocol_.GenerateFrame(command, data, data_length, data_out);
   if (length < kFrameMinimalLength) {
     return;
   }
-  com_.Write((char*)data_out, length);
-  usleep(5000);
+  while (!message_sent_) {
+    ROS_INFO("send message");
+    com_.Write((char*)data_out, length);
+    usleep(5000);
+    message_sent_ = true;
+  }
 }
 
 void FlatScan::HandleReceivedData(char* data, int length) {
