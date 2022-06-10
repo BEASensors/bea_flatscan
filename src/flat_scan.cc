@@ -284,6 +284,19 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
 }
 
 void FlatScan::ParseMdiMessage(const uint8_t* data, const int& length) {
+  uint16_t start_index{0};
+  start_index += (parameters_.counter > 0 ? 6 : 0);
+  start_index += (parameters_.temperature > 0 ? 2 : 0);
+  start_index += (parameters_.facet > 0 ? 1 : 0);
+  const uint16_t distance_length{static_cast<uint16_t>(parameters_.number_of_spots * 2)};
+
+  uint16_t total_length{static_cast<uint16_t>(start_index + distance_length)};
+  total_length += parameters_.information == 2 ? distance_length : 0;
+  if (total_length != length) {
+    ROS_ERROR("MDI data length mismatch (should be %i but get %i)", total_length, length);
+    return;
+  }
+
   sensor_msgs::LaserScan message;
   message.header.stamp = ros::Time::now();
   message.header.frame_id = frame_id_;
@@ -296,23 +309,23 @@ void FlatScan::ParseMdiMessage(const uint8_t* data, const int& length) {
   message.time_increment = refresh_period_ / parameters_.number_of_spots;
   switch (parameters_.information) {
     case 0: {
-      for (int i = 9; i < length - 1; i += 2) {
+      for (int i = start_index; i < length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
       }
     } break;
     case 1: {
-      for (int i = 9; i < length - 1; i += 2) {
+      for (int i = start_index; i < length - 1; i += 2) {
         const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.intensities.push_back(static_cast<float>(intensity));
       }
     } break;
     case 2: {
-      for (int i = 9; i < 808; i += 2) {
+      for (int i = start_index; i < start_index + distance_length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
       }
-      for (int i = 809; i < length - 1; i += 2) {
+      for (int i = start_index + distance_length; i < length - 1; i += 2) {
         const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.intensities.push_back(static_cast<float>(intensity));
       }
