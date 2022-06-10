@@ -2,6 +2,8 @@
 
 #include <ros/ros.h>
 
+#include <mutex>
+
 #include "bea_sensors/Configure.h"
 #include "protocol.h"
 #include "serial_port.h"
@@ -66,6 +68,8 @@ class FlatScan {
   float first_angle_ = 0., last_angle_ = 0.;
   float min_range_ = 0., max_range_ = 0.;
   std::string frame_id_;
+
+  std::mutex mutex_;
 
   ros::NodeHandle nh_;
   ros::Publisher laser_scan_publisher_;

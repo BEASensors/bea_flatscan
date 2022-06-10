@@ -11,8 +11,8 @@
     <param name="max_range" value="8"/>         <!-- in meters -->
 
     <param name="frame_id" value="laser_link"/>
-    <param name="topic_name" value="/flat_scan"/>
+    <param name="scan_topic" value="/scan"/>
   </node>
 
-  <!-- <node name="rviz" pkg="rviz" type="rviz"/> -->
+  <node name="rviz" pkg="rviz" type="rviz"/>
 </launch>

@@ -231,7 +231,9 @@ void FlatScan::HandleSetLed(Configure::Request& req, Configure::Response& res) {
 }
 
 void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
+  std::unique_lock<std::mutex> lock(mutex_);
   message_sent_ = false;
+  lock.unlock();
   uint8_t data_out[data_length + kFrameMinimalLength];
   uint16_t length = protocol_.GenerateFrame(command, data, data_length, data_out);
   if (length < kFrameMinimalLength) {
@@ -240,8 +242,7 @@ void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length,
   while (!message_sent_) {
     ROS_INFO("send message");
     com_.Write((char*)data_out, length);
-    usleep(5000);
-    message_sent_ = true;
+    sleep(2);
   }
 }
 
@@ -267,33 +268,63 @@ void FlatScan::ParseDataFrame(DataFrame& frame) {
       ParseMdiMessage(data, length);
     } break;
     case CommandFromSensor::SEND_IDENTITY: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ParseSendIdentityMessage(data, length);
     } break;
     case CommandFromSensor::SEND_PARAMETERS: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ParseSendParametersMessage(data, length);
     } break;
     case CommandFromSensor::HEARTBEAT: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ParseHeartbeatMessage(data, length);
     } break;
     case CommandFromSensor::EMERGENCY: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ParseEmergencyMessage(data, length);
     } break;
     case CommandToSensor::SET_BAUDRATE: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Set baudrate succeeded: %i", data[0]);
     } break;
     case CommandToSensor::STORE_PARAMETERS: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Store parameters succeeded");
     } break;
     case CommandToSensor::RESET_MDI_COUNTER: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Reset MDI counter succeeded");
     } break;
     case CommandToSensor::RESET_HEARTBEAT_COUNTER: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Reset heartbeat counter succeeded");
     } break;
     case CommandToSensor::RESET_EMERGENCY_COUNTER: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Reset emergency counter succeeded");
     } break;
     case CommandToSensor::SET_LED: {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
       ROS_INFO("Set LED succeeded");
     } break;
     default:
