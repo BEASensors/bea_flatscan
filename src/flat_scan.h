@@ -47,6 +47,7 @@ class FlatScan {
 
  private:
   bool Initialize();
+  bool InitializeConfiguration();
   bool HandleConfiguration(Configure::Request& req, Configure::Response& res);
   void HandleSetBaudrate(Configure::Request& req, Configure::Response& res);
   void HandleGetMeasurements(Configure::Request& req, Configure::Response& res);
@@ -65,7 +66,7 @@ class FlatScan {
  private:
   bool message_sent_ = false;
   float resolution_ = 0., refresh_period_ = 0.;
-  float first_angle_ = 0., last_angle_ = 0.;
+  float angle_first_ = 0., angle_last_ = 0.;
   float min_range_ = 0., max_range_ = 0.;
   std::string frame_id_;
 

@@ -18,9 +18,22 @@ bool FlatScan::Initialize() {
   int baudrate;
   nh_.param("baudrate", baudrate, 921600);
 
+  std::string scan_topic, heartbeat_topic, emergency_topic;
+  nh_.param("scan_topic", scan_topic, std::string("/scan"));
+  nh_.param("heartbeat_topic", heartbeat_topic, std::string("/heartbeat"));
+  nh_.param("emergency_topic", emergency_topic, std::string("/emergency"));
+  nh_.param("scan_frame_id", frame_id_, std::string("laser_link"));
+
+  nh_.param("min_range", min_range_, static_cast<float>(0.));
+  nh_.param("max_range", max_range_, static_cast<float>(8.));
+
+  int temp;
+  nh_.param("enable_temperature", temp, static_cast<int>(1));
+  parameters_.temperature = static_cast<uint8_t>(temp);
+  nh_.param("information_in_mdi", temp, static_cast<int>(2));
+  parameters_.information = static_cast<uint8_t>(temp);
   std::string detection_field_mode;
   nh_.param("detection_field_mode", detection_field_mode, std::string("HD"));
-
   if (detection_field_mode == "HD") {
     ROS_INFO("FlatScan works in HD mode, loading HD configurations");
     parameters_.mode = 1;
@@ -40,16 +53,20 @@ bool FlatScan::Initialize() {
     refresh_period_ = kHighDensityRefreshPeriod;  // in seconds
     parameters_.number_of_spots = 400;
   }
-  nh_.param("first_angle", first_angle_, static_cast<float>(0.));
-  nh_.param("last_angle", last_angle_, static_cast<float>(108.));
-  nh_.param("min_range", min_range_, static_cast<float>(0.));
-  nh_.param("max_range", max_range_, static_cast<float>(8.));
-  nh_.param("frame_id", frame_id_, std::string("laser_link"));
-
-  std::string scan_topic, heartbeat_topic, emergency_topic;
-  nh_.param("scan_topic", scan_topic, std::string("/scan"));
-  nh_.param("heartbeat_topic", heartbeat_topic, std::string("/heartbeat"));
-  nh_.param("emergency_topic", emergency_topic, std::string("/emergency"));
+  nh_.param("optimization", temp, static_cast<int>(0));
+  parameters_.optimization = static_cast<uint8_t>(temp);
+  nh_.param("angle_first", angle_first_, static_cast<float>(0.));
+  nh_.param("angle_last", angle_last_, static_cast<float>(108.));
+  parameters_.angle_first = static_cast<uint16_t>(angle_first_ * 1e2);
+  parameters_.angle_last = static_cast<uint16_t>(angle_last_ * 1e2);
+  nh_.param("enable_counter", temp, static_cast<int>(1));
+  parameters_.counter = static_cast<uint8_t>(temp);
+  nh_.param("heartbeat_period", temp, static_cast<int>(5));
+  parameters_.heartbeat_period = static_cast<uint8_t>(temp);
+  nh_.param("enable_facet", temp, static_cast<int>(1));
+  parameters_.facet = static_cast<uint8_t>(temp);
+  nh_.param("averaging_setting", temp, static_cast<int>(0));
+  parameters_.averaging = static_cast<uint8_t>(temp);
 
   laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(scan_topic, 1, this);
   heartbeat_publisher_ = nh_.advertise<Heartbeat>(heartbeat_topic, 1, this);
@@ -59,6 +76,15 @@ bool FlatScan::Initialize() {
   com_.RegisterCallback(this, &FlatScan::HandleReceivedData);
   com_.Connect(port, baudrate);
 
+  InitializeConfiguration();
+  return true;
+}
+
+bool FlatScan::InitializeConfiguration() {
+  Configure srv;
+  srv.request.command = "set_parameters";
+  srv.request.subcommand = "";
+  HandleSetParameters(srv.request, srv.response);
   return true;
 }
 
@@ -141,7 +167,9 @@ void FlatScan::HandleGetMeasurements(Configure::Request& req, Configure::Respons
 void FlatScan::HandleSetParameters(Configure::Request& req, Configure::Response& res) {
   res.success = true;
   res.description = "set " + req.subcommand + " to " + req.value;
-  if (kParameterMap.find(req.subcommand) == kParameterMap.end()) {
+  if (req.subcommand == "") {
+    res.description = "initialize configuration";
+  } else if (kParameterMap.find(req.subcommand) == kParameterMap.end()) {
     res.success = false;
     res.description = "no " + req.subcommand;
     return;
@@ -163,12 +191,14 @@ void FlatScan::HandleSetParameters(Configure::Request& req, Configure::Response&
   data[20] = parameters_.facet;
   data[21] = parameters_.averaging;
 
-  if (req.subcommand != "spots" && req.subcommand != "angle_first" && req.subcommand != "angle_last") {
-    data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
-  } else {
-    const uint16_t value{static_cast<uint16_t>(std::stoi(req.value))};
-    data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(value & 0xff);
-    data[kParameterMap.at(req.subcommand) + 1] = static_cast<uint8_t>((value & 0xff00) >> 8);
+  if (req.subcommand != "") {
+    if (req.subcommand != "spots" && req.subcommand != "angle_first" && req.subcommand != "angle_last") {
+      data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(std::stoi(req.value));
+    } else {
+      const uint16_t value{static_cast<uint16_t>(std::stoi(req.value))};
+      data[kParameterMap.at(req.subcommand)] = static_cast<uint8_t>(value & 0xff);
+      data[kParameterMap.at(req.subcommand) + 1] = static_cast<uint8_t>((value & 0xff00) >> 8);
+    }
   }
 
   SendMessage(SET_PARAMETERS, 22, data);
@@ -242,7 +272,7 @@ void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length,
   while (!message_sent_) {
     ROS_INFO("send message");
     com_.Write((char*)data_out, length);
-    sleep(2);
+    sleep(1);
   }
 }
 
@@ -350,8 +380,8 @@ void FlatScan::ParseMdiMessage(const uint8_t* data, const int& length) {
   sensor_msgs::LaserScan message;
   message.header.stamp = ros::Time::now();
   message.header.frame_id = frame_id_;
-  message.angle_min = angles::from_degrees(first_angle_);
-  message.angle_max = angles::from_degrees(last_angle_);
+  message.angle_min = angles::from_degrees(angle_first_);
+  message.angle_max = angles::from_degrees(angle_last_);
   message.angle_increment = angles::from_degrees(resolution_);
   message.range_min = min_range_;
   message.range_max = max_range_;
@@ -422,8 +452,8 @@ void FlatScan::ParseSendParametersMessage(const uint8_t* data, const int& length
     resolution_ = kHighDensityResolution;
     refresh_period_ = kHighDensityRefreshPeriod;
   }
-  first_angle_ = static_cast<float>(parameters_.angle_first) * 1e-2;
-  last_angle_ = static_cast<float>(parameters_.angle_last) * 1e-2;
+  angle_first_ = static_cast<float>(parameters_.angle_first) * 1e-2;
+  angle_last_ = static_cast<float>(parameters_.angle_last) * 1e-2;
 
   ROS_INFO("verification_code: %i", verification_code);
   ROS_INFO("charge: %i", charge);
@@ -432,8 +462,8 @@ void FlatScan::ParseSendParametersMessage(const uint8_t* data, const int& length
   ROS_INFO("detection_field_mode: %i", parameters_.mode);
   ROS_INFO("optimization: %i", parameters_.optimization);
   ROS_INFO("number_of_spots: %i", parameters_.number_of_spots);
-  ROS_INFO("angle_first: %f", first_angle_);
-  ROS_INFO("angle_last: %f", last_angle_);
+  ROS_INFO("angle_first: %f", angle_first_);
+  ROS_INFO("angle_last: %f", angle_last_);
   ROS_INFO("counter_enabled: %i", parameters_.counter);
   ROS_INFO("heartbeat_period: %i", parameters_.heartbeat_period);
   ROS_INFO("facet_enabled: %i", parameters_.facet);
