@@ -33,11 +33,11 @@ uint16_t Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, c
   data_out[index++] = static_cast<uint8_t>(checksum & 0xff);  // check the order
   data_out[index++] = static_cast<uint8_t>((checksum >> 8) & 0xff);
 
-  std::cout << "frame:" << std::endl;
-  for (uint16_t i = 0; i < index; ++i) {
-    std::cout << std::hex << (static_cast<int>(data_out[i]) & 0xff) << " ";
-  }
-  std::cout << std::endl;
+  // std::cout << "frame:" << std::endl;
+  // for (uint16_t i = 0; i < index; ++i) {
+  //   std::cout << std::hex << (static_cast<int>(data_out[i]) & 0xff) << " ";
+  // }
+  // std::cout << std::endl;
 
   if (index != frame_length) {
     ROS_ERROR("GenerateFrame error");

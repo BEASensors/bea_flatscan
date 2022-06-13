@@ -28,7 +28,7 @@ All the parameters are listed in the launch file
 - **averaging_setting**: averaging settings, "0" means no averaging
 
 ## Published Messages
-1. sensor_msgs/LaserScan
+1. sensor_msgs/LaserScan  
    Published when the MDI messages are received, the data included in the frame is set by the parameter *information_in_mdi*
 2. bea_sensors/Emergency  
    Published only when error occurs or the host requests.

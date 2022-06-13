@@ -270,7 +270,7 @@ void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length,
     return;
   }
   while (!message_sent_) {
-    ROS_INFO("send message");
+    // ROS_INFO("send message");
     com_.Write((char*)data_out, length);
     sleep(1);
   }
