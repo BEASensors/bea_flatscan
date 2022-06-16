@@ -40,6 +40,7 @@ add_executable(flat_scan
   src/demo.cc
   src/flat_scan.cc
   src/protocol.cc
+  src/parser.cc
 )
 
 add_dependencies(flat_scan

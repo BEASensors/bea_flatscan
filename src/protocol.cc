@@ -12,7 +12,7 @@ Protocol::Protocol() { data_ = new uint8_t[max_buffer_size_]; }
 
 Protocol::~Protocol() { delete[] data_; }
 
-uint16_t Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
+uint16_t Protocol::GenerateRawFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
   std::copy(kSyncHead, kSyncHead + kSyncHeadLength, data_out);
   uint16_t index{kSyncHeadLength};
 
@@ -40,7 +40,7 @@ uint16_t Protocol::GenerateFrame(const uint16_t& command, const uint8_t* data, c
   // std::cout << std::endl;
 
   if (index != frame_length) {
-    ROS_ERROR("GenerateFrame error");
+    ROS_ERROR("GenerateRawFrame error");
     return 0;
   }
 

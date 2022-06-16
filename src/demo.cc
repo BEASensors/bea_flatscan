@@ -8,8 +8,9 @@ int main(int argc, char** argv) {
 
   bea_sensors::FlatScan flat_scan(nh);
 
-  ros::Rate rate(20.);
+  ros::Rate rate(30.);
   while (ros::ok()) {
+    flat_scan.SpinOnce();
     ros::spinOnce();
     rate.sleep();
   }
