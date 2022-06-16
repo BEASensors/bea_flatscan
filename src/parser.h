@@ -7,6 +7,7 @@
 #include "bea_sensors/Configure.h"
 #include "bea_sensors/Emergency.h"
 #include "bea_sensors/Heartbeat.h"
+#include "bea_sensors/Parameters.h"
 #include "data_frame.h"
 
 namespace bea_sensors {
@@ -48,29 +49,12 @@ enum CommandFromSensor {
   EMERGENCY = (0xc3 << 8 | 0x6e),
 };
 
-struct Parameters {
-  uint8_t temperature = 1;
-  uint8_t information = 0;
-  uint8_t mode = 1;
-  uint8_t optimization = 0;
-  uint8_t counter = 1;
-  uint8_t heartbeat_period = 5;
-  uint8_t facet = 1;
-  uint8_t averaging = 0;
-  uint16_t number_of_spots = 400;
-  uint16_t angle_first = 0;
-  uint16_t angle_last = 10800;
-
-  float range_min = 0.;
-  float range_max = 8.;
-  std::string frame_id = "laser_link";
-};
-
 class Parser {
  public:
   Parser();
   ~Parser();
 
+  void Initialize(const Parameters& parameters = Parameters()) { parameters_ = parameters; }
   bool GenerateDataFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success, std::string& description,
                          DataFrame& frame);
   bool ParseDataFrame(const DataFrame& frame);
@@ -86,7 +70,7 @@ class Parser {
   void GenerateGetMeasurementsFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success,
                                     std::string& description, DataFrame& frame) const;
   void GenerateSetParametersFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success,
-                                    std::string& description, DataFrame& frame) const;
+                                  std::string& description, DataFrame& frame) const;
   void GenerateSetLedFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success,
                            std::string& description, DataFrame& frame) const;
 

@@ -5,9 +5,6 @@
 
 #include <mutex>
 
-#include "bea_sensors/Configure.h"
-#include "bea_sensors/Emergency.h"
-#include "bea_sensors/Heartbeat.h"
 #include "parser.h"
 #include "protocol.h"
 #include "serial_port.h"
@@ -42,7 +39,6 @@ class FlatScan {
   ros::Publisher heartbeat_publisher_;
   ros::ServiceServer configuration_server_;
 
-  Parameters parameters_;
   SerialPort<FlatScan> com_;
   Protocol protocol_;
   Parser parser_;

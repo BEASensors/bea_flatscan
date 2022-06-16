@@ -231,7 +231,7 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
   }
 
   message.header.stamp = ros::Time::now();
-  message.header.frame_id = parameters_.frame_id;
+  message.header.frame_id = parameters_.header.frame_id;
   message.angle_min = angles::from_degrees(static_cast<float>(parameters_.angle_first) * 1e-2);
   message.angle_max = angles::from_degrees(static_cast<float>(parameters_.angle_last) * 1e-2);
   message.angle_increment = parameters_.mode == 1 ? angles::from_degrees(kHighDensityResolution) : angles::from_degrees(kHighSpeedResolution);

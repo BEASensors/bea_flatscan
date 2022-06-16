@@ -40,7 +40,7 @@ bool FlatScan::Initialize() {
   nh_.param("emergency_topic", emergency_topic, std::string("/emergency"));
 
   Parameters parameters;
-  nh_.param("scan_frame_id", parameters.frame_id, std::string("laser_link"));
+  nh_.param("scan_frame_id", parameters.header.frame_id, std::string("laser_link"));
   nh_.param("min_range", parameters.range_min, static_cast<float>(0.));
   nh_.param("max_range", parameters.range_max, static_cast<float>(8.));
 
@@ -93,6 +93,7 @@ bool FlatScan::Initialize() {
 }
 
 bool FlatScan::InitializeConfiguration(const Parameters& parameters) {
+  parser_.Initialize(parameters);
   Configure srv;
   srv.request.command = "set_parameters";
   srv.request.subcommand = "";

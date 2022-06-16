@@ -16,6 +16,7 @@ add_message_files(
   FILES
   Emergency.msg
   Heartbeat.msg
+  Parameters.msg
 )
 
 add_service_files(
