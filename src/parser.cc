@@ -240,6 +240,8 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
   message.scan_time = parameters_.mode == 1 ? kHighDensityRefreshPeriod : kHighSpeedRefreshPeriod;
   message.time_increment = message.scan_time / parameters_.number_of_spots;
 
+  message.ranges.clear();
+  message.intensities.clear();
   switch (parameters_.information) {
     case 0: {
       for (int i = start_index; i < length - 1; i += 2) {
