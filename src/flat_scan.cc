@@ -116,6 +116,7 @@ bool FlatScan::HandleConfiguration(Configure::Request& req, Configure::Response&
 void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
   std::unique_lock<std::mutex> lock(mutex_);
   message_sent_ = false;
+  lock.unlock();
   uint8_t data_out[data_length + kFrameMinimalLength];
   uint16_t length = protocol_.GenerateRawFrame(command, data, data_length, data_out);
   if (length < kFrameMinimalLength) {
@@ -132,7 +133,6 @@ void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length,
   if (!message_sent_) {
     ROS_ERROR("send message failed");
   }
-  lock.unlock();
 }
 
 void FlatScan::HandleReceivedData(char* data, int length) {
@@ -152,9 +152,11 @@ void FlatScan::HandleReceivedData(char* data, int length) {
       continue;
     }
 
-    std::unique_lock<std::mutex> lock(mutex_);
-    message_sent_ = true;
-    lock.unlock();
+    if (frame.command() != MDI) {
+      std::unique_lock<std::mutex> lock(mutex_);
+      message_sent_ = true;
+      lock.unlock();
+    }
   }
 }
 
