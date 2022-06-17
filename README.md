@@ -54,7 +54,7 @@ General form: `rosservice call /flat_scan/configure "command: <command> subcomma
     <td height="105" style='height:78.75pt;' x:str>set_baudrate</td>
     <td x:str>-</td>
     <td class="xl65" x:str>57600<br/>115200<br/>230400<br/>460800<br/>921600</td>
-    <td class="xl65" x:str>rosservice call /flat_scan/configure &quot;command: 'set_baudrate'<br/>subcommand: ''<br/>value: '961200'&quot;</td>
+    <td class="xl65" x:str>rosservice call /flat_scan/configure &quot;command: 'set_baudrate'<br/>subcommand: ''<br/>value: '921600'&quot;</td>
    </tr>
    <tr height="63" style='height:47.25pt;'>
     <td height="63" style='height:47.25pt;' x:str>get_measurements</td>
