@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/lockfree/spsc_queue.hpp>
+#include <boost/thread.hpp>
 
 #include "data_frame.h"
 
@@ -19,7 +20,7 @@ class Protocol {
   Protocol();
   ~Protocol();
 
-  bool GetLatestDataFrame(DataFrame& frame) { return queue_.pop(frame); }
+  bool GetLatestDataFrame(DataFrame& frame);
   uint16_t GenerateRawFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out);
   int InsertByte(const uint8_t& byte);
 
@@ -37,6 +38,8 @@ class Protocol {
     DATA,
     CHK,
   };
+
+  boost::mutex mutex_;
 
   const uint16_t max_buffer_size_ = 10000;
 

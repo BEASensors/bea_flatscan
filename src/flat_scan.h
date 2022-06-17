@@ -24,6 +24,7 @@ class FlatScan {
   bool HandleConfiguration(Configure::Request& req, Configure::Response& res);
   void SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data);
   void HandleReceivedData(char* data, int length);
+  void ParserRoutine();
 
  private:
   bool message_sent_ = false;
