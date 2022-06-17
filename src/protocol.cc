@@ -73,7 +73,9 @@ int Protocol::InsertByte(const uint8_t& byte) {
         // field_ = Field::CHK;
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
+        boost::unique_lock<boost::mutex> lock(mutex_);
         queue_.push(frame);
+        lock.unlock();
         return 1;
       } else {
         return -3;
