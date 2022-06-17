@@ -1,7 +1,7 @@
 # Quick Start Instruction
 1. `mkdir -p ~/bea_ws/src/ && cd ~/bea_ws/src/`
 2. `git clone git@github.com:huamingduo/bea_sensors.git` or `git clone https://github.com/huamingduo/bea_sensors.git`
-3. `catkin build`
+3. `cd ~/bea_ws/ && catkin build`
 4. `source devel/setup.bash`
 5. `roslaunch bea_sensors flat_scan.launch`
 
