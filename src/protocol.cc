@@ -63,7 +63,11 @@ int Protocol::InsertByte(const uint8_t& byte) {
       }
     case Field::DATA:
       if (ExtractData(byte)) {
-        field_ = Field::CHK;
+        // field_ = Field::CHK;
+        field_ = Field::SYNC;
+        DataFrame frame(command_, data_, data_length_);
+        queue_.push(frame);
+        return 1;
       } else {
         return -3;
       }
