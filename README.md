@@ -1,3 +1,7 @@
+# Introduction
+This is a ROS driver for BEA's Flatscan family of laser scanners.
+For more information, visit www.beasensors.com
+
 # Quick Start Instruction
 1. `mkdir -p ~/bea_ws/src/ && cd ~/bea_ws/src/`
 2. `git clone https://github.com/BEASensors/bea_flatscan.git`
