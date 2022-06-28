@@ -37,17 +37,17 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(flat_scan
+add_executable(flatscan
   src/demo.cc
-  src/flat_scan.cc
+  src/flatscan.cc
   src/protocol.cc
   src/parser.cc
 )
 
-add_dependencies(flat_scan
+add_dependencies(flatscan
 	${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(flat_scan
+target_link_libraries(flatscan
   ${catkin_LIBRARIES}
 )

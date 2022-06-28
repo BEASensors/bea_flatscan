@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <node name="flat_scan" pkg="bea_sensors" type="flat_scan" output="screen">
+  <node name="flatscan" pkg="bea_sensors" type="flatscan" output="screen">
     <param name="port" value="/dev/ttyUSB0"/>
     <param name="baudrate" value="921600"/>
 

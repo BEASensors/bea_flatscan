@@ -1,4 +1,4 @@
-#include "flat_scan.h"
+#include "flatscan.h"
 
 #include <angles/angles.h>
 
