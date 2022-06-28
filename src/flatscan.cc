@@ -6,11 +6,11 @@
 
 namespace bea_sensors {
 
-FlatScan::FlatScan(const ros::NodeHandle& nh_) : nh_(nh_) { Initialize(); }
+Flatscan::Flatscan(const ros::NodeHandle& nh_) : nh_(nh_) { Initialize(); }
 
-FlatScan::~FlatScan() { com_.Close(); }
+Flatscan::~Flatscan() { com_.Close(); }
 
-void FlatScan::SpinOnce() {
+void Flatscan::SpinOnce() {
   const ros::Time current_scan_stamp{parser_.laser_scan().header.stamp};
   if (laser_scan_publisher_.getNumSubscribers() > 0 && last_scan_stamp_ < current_scan_stamp) {
     laser_scan_publisher_.publish(parser_.laser_scan());
@@ -30,7 +30,7 @@ void FlatScan::SpinOnce() {
   }
 }
 
-bool FlatScan::Initialize() {
+bool Flatscan::Initialize() {
   std::string port;
   nh_.param("port", port, std::string("/dev/ttyUSB0"));
   int baudrate;
@@ -54,15 +54,15 @@ bool FlatScan::Initialize() {
   std::string detection_field_mode;
   nh_.param("detection_field_mode", detection_field_mode, std::string("HD"));
   if (detection_field_mode == "HD") {
-    ROS_INFO("FlatScan works in HD mode, loading HD configurations");
+    ROS_INFO("Flatscan works in HD mode, loading HD configurations");
     parameters.mode = 1;
     parameters.number_of_spots = 400;
   } else if (detection_field_mode == "HS") {
-    ROS_INFO("FlatScan works in HS mode, loading HS configurations");
+    ROS_INFO("Flatscan works in HS mode, loading HS configurations");
     parameters.mode = 0;
     parameters.number_of_spots = 100;
   } else {
-    ROS_WARN("FlatScan works in %s(UNKNOWN) mode, loading HD configurations by default", detection_field_mode.c_str());
+    ROS_WARN("Flatscan works in %s(UNKNOWN) mode, loading HD configurations by default", detection_field_mode.c_str());
     parameters.mode = 1;
     parameters.number_of_spots = 400;
   }
@@ -85,19 +85,19 @@ bool FlatScan::Initialize() {
   laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(scan_topic, 1, this);
   heartbeat_publisher_ = nh_.advertise<Heartbeat>(heartbeat_topic, 1, this);
   emergency_publisher_ = nh_.advertise<Emergency>(emergency_topic, 1, this);
-  configuration_server_ = nh_.advertiseService("configure", &FlatScan::HandleConfiguration, this);
+  configuration_server_ = nh_.advertiseService("configure", &Flatscan::HandleConfiguration, this);
 
-  com_.RegisterCallback(this, &FlatScan::HandleReceivedData);
+  com_.RegisterCallback(this, &Flatscan::HandleReceivedData);
   com_.Connect(port, baudrate);
 
-  std::thread thread(&FlatScan::ParserRoutine, this);
+  std::thread thread(&Flatscan::ParserRoutine, this);
   thread.detach();
 
   InitializeConfiguration(parameters);
   return true;
 }
 
-bool FlatScan::InitializeConfiguration(const Parameters& parameters) {
+bool Flatscan::InitializeConfiguration(const Parameters& parameters) {
   parser_.Initialize(parameters);
   Configure srv;
   srv.request.command = "set_parameters";
@@ -106,7 +106,7 @@ bool FlatScan::InitializeConfiguration(const Parameters& parameters) {
   return srv.response.success;
 }
 
-bool FlatScan::HandleConfiguration(Configure::Request& req, Configure::Response& res) {
+bool Flatscan::HandleConfiguration(Configure::Request& req, Configure::Response& res) {
   DataFrame frame;
   bool success{false};
   if (!parser_.GenerateDataFrame(req.command, req.subcommand, req.value, success, res.description, frame)) {
@@ -118,7 +118,7 @@ bool FlatScan::HandleConfiguration(Configure::Request& req, Configure::Response&
   return true;
 }
 
-void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
+void Flatscan::SendMessage(const uint16_t& command, const uint16_t& data_length, const uint8_t* data) {
   std::unique_lock<std::mutex> lock(mutex_);
   message_sent_ = false;
   lock.unlock();
@@ -140,7 +140,7 @@ void FlatScan::SendMessage(const uint16_t& command, const uint16_t& data_length,
   }
 }
 
-void FlatScan::HandleReceivedData(char* data, int length) {
+void Flatscan::HandleReceivedData(char* data, int length) {
   for (int i = 0; i < length; ++i) {
     if (protocol_.InsertByte(data[i]) < 0) {
       continue;
@@ -148,7 +148,7 @@ void FlatScan::HandleReceivedData(char* data, int length) {
   }
 }
 
-void FlatScan::ParserRoutine() {
+void Flatscan::ParserRoutine() {
   while (nh_.ok()) {
     DataFrame frame;
     if (!protocol_.GetLatestDataFrame(frame)) {

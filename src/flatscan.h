@@ -11,10 +11,10 @@
 
 namespace bea_sensors {
 
-class FlatScan {
+class Flatscan {
  public:
-  FlatScan(const ros::NodeHandle& nh);
-  ~FlatScan();
+  Flatscan(const ros::NodeHandle& nh);
+  ~Flatscan();
 
   void SpinOnce();
 
@@ -40,7 +40,7 @@ class FlatScan {
   ros::Publisher heartbeat_publisher_;
   ros::ServiceServer configuration_server_;
 
-  SerialPort<FlatScan> com_;
+  SerialPort<Flatscan> com_;
   Protocol protocol_;
   Parser parser_;
 };

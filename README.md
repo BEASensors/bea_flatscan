@@ -8,7 +8,7 @@
 # Functionality Description
 ## Parameters
 All the parameters are listed in the launch file
-- **port**: the port connecting to the FlatScan sensor, e.g. "/dev/ttyUSB0"
+- **port**: the port connecting to the Flatscan sensor, e.g. "/dev/ttyUSB0"
 - **baudrate**: the baudrate used for communication
 - **scan_frame_id**: the frame_id of the published LaserScan message
 - **scan_topic**: the topic of the LaserScan message published to
