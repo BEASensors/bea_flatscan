@@ -1,31 +1,34 @@
+# Introduction
+This is a ROS1 Driver for the BEA LZR® Raw-F (Flatscan) laser scanner.
+
 # Quick Start Instruction
 1. `mkdir -p ~/bea_ws/src/ && cd ~/bea_ws/src/`
-2. `git clone git@github.com:huamingduo/bea_sensors.git` or `git clone https://github.com/huamingduo/bea_sensors.git`
+2. `git clone https://github.com/BEASensors/bea_flatscan.git`
 3. `cd ~/bea_ws/ && catkin build`
 4. `source devel/setup.bash`
 5. `roslaunch bea_sensors flatscan.launch`
 
 # Functionality Description
 ## Parameters
-All the parameters are listed in the launch file
-- **port**: the port connecting to the Flatscan sensor, e.g. "/dev/ttyUSB0"
-- **baudrate**: the baudrate used for communication
-- **scan_frame_id**: the frame_id of the published LaserScan message
-- **scan_topic**: the topic of the LaserScan message published to
-- **heartbeat_topic**: the topic of the heartbeat message published to
-- **emergency_topic**: the topic of the emergency message published to
-- **min_range**: the minimal valid range of the LaserScan, in meters
-- **max_range**: the maximal valid range of the LaserScan, in meters
-- **enable_temperature**: CTN field in MDI frames
-- **information_in_mdi**: the required data in MDI frames, e.g. "2" indicates that both distances and intensities are requried
-- **detection_field_mode**: the required detection mode, e.g. "HD" means "High Density" mode
-- **optimization**: the sensitivity and immunity optimization setting, e.g. "0" means no optimization
-- **angle_first**: the starting angle, in degrees
-- **angle_last**: the ending angle, in degrees
-- **enable_counter**: the MDI, heartbeat, emergency counters settings
-- **heartbeat_period**: the heartbeat message publishing rate, setting to "0" disables the heartbeat publishing
-- **enable_facet**: facet settings
-- **averaging_setting**: averaging settings, "0" means no averaging
+All these parameters are listed in the launch file:
+- `port` the port connecting to the Flatscan sensor, e.g. "/dev/ttyUSB0"
+- `baudrate` the baudrate used for communication
+- `scan_frame_id` the frame_id of the published LaserScan message
+- `scan_topic` the topic of the LaserScan message published to
+- `heartbeat_topic` the topic of the heartbeat message published to
+- `emergency_topic` the topic of the emergency message published to
+- `min_range` the minimal valid range of the LaserScan, in meters
+- `max_range` the maximal valid range of the LaserScan, in meters
+- `enable_temperature` CTN field in MDI frames
+- `information_in_mdi` the required data in MDI frames, e.g. "2" indicates that both distances and intensities are requried
+- `detection_field_mode` the required detection mode, e.g. "HD" means "High Density" mode
+- `optimization` the sensitivity and immunity optimization setting, e.g. "0" means no optimization
+- `angle_first` the starting angle, in degrees
+- `angle_last` the ending angle, in degrees
+- `enable_counter` the MDI, heartbeat, emergency counters settings
+- `heartbeat_period` the heartbeat message publishing rate, setting to "0" disables the heartbeat publishing
+- `enable_facet` facet settings
+- `averaging_setting`: averaging settings, "0" means no averaging
 
 ## Published Messages
 1. sensor_msgs/LaserScan  
@@ -36,7 +39,7 @@ All the parameters are listed in the launch file
    Published periodically according to the parameter heartbeat_period
    
 ## Service
-Used for configuring the flat scan sensor  
+Used for configuring the BEA LZR® Raw-F (Flatscan) laser scanner.
 General form: `rosservice call /flatscan/configure "command: <command> subcommand: <subcommand> value: <value>"`
 
 <table width="1372" border="0" cellpadding="0" cellspacing="0" style='width:1029.00pt;border-collapse:collapse;table-layout:fixed;'>
