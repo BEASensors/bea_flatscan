@@ -306,8 +306,8 @@ void Parser::ParseSendParametersMessage(const uint8_t*& data, const int& length,
   ROS_INFO("detection_field_mode: %i", parameters.mode);
   ROS_INFO("optimization: %i", parameters.optimization);
   ROS_INFO("number_of_spots: %i", parameters.number_of_spots);
-  ROS_INFO("angle_first: %f", angles::from_degrees(static_cast<float>(parameters_.angle_first) * 1e-2));
-  ROS_INFO("angle_last: %f", angles::from_degrees(static_cast<float>(parameters_.angle_last) * 1e-2));
+  ROS_INFO("angle_first: %f", static_cast<float>(parameters.angle_first) * 1e-2);
+  ROS_INFO("angle_last: %f", static_cast<float>(parameters.angle_last) * 1e-2);
   ROS_INFO("counter_enabled: %i", parameters.counter);
   ROS_INFO("heartbeat_period: %i", parameters.heartbeat_period);
   ROS_INFO("facet_enabled: %i", parameters.facet);
