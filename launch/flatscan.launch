@@ -13,7 +13,7 @@
     <param name="min_range" value="0"/>           <!-- in meters -->
     <param name="max_range" value="8"/>           <!-- in meters -->
     <param name="enable_temperature" value="1"/>
-    <param name="information_in_mdi" value="0"/>
+    <param name="information_in_mdi" value="2"/>
     <param name="detection_field_mode" value="HD"/>
     <param name="optimization" value="0"/>
     <param name="angle_first" value="0."/>         <!-- in degrees-->
