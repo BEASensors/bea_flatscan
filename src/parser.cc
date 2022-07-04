@@ -226,7 +226,7 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
   uint16_t total_length{static_cast<uint16_t>(start_index + distance_length)};
   total_length += parameters_.information == 2 ? distance_length : 0;
   if (total_length != length) {
-    ROS_ERROR("MDI data length mismatch (should be %i but get %i)", total_length, length);
+    // ROS_ERROR("MDI data length mismatch (should be %i but get %i)", total_length, length);
     return;
   }
 
