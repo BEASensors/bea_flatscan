@@ -45,6 +45,7 @@ add_executable(flatscan
 )
 
 add_dependencies(flatscan
+	bea_sensors_generate_messages_cpp
 	${catkin_EXPORTED_TARGETS}
 )
 
