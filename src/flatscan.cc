@@ -2,8 +2,6 @@
 
 #include <angles/angles.h>
 
-#include <thread>
-
 namespace bea_sensors {
 
 Flatscan::Flatscan(const ros::NodeHandle& nh_) : nh_(nh_) { Initialize(); }
@@ -90,9 +88,6 @@ bool Flatscan::Initialize() {
   com_.RegisterCallback(this, &Flatscan::HandleReceivedData);
   com_.Connect(port, baudrate);
 
-  std::thread thread(&Flatscan::ParserRoutine, this);
-  thread.detach();
-
   InitializeConfiguration(parameters);
   return true;
 }
@@ -145,21 +140,15 @@ void Flatscan::HandleReceivedData(char* data, int length) {
     if (protocol_.InsertByte(data[i]) < 0) {
       continue;
     }
-  }
-}
 
-void Flatscan::ParserRoutine() {
-  while (nh_.ok()) {
     DataFrame frame;
     if (!protocol_.GetLatestDataFrame(frame)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      ROS_ERROR("Get received frame error");
       continue;
     }
 
     if (!parser_.ParseDataFrame(frame)) {
       ROS_ERROR("Parse frame failed");
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
       continue;
     }
 
@@ -168,7 +157,6 @@ void Flatscan::ParserRoutine() {
       message_sent_ = true;
       lock.unlock();
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
 

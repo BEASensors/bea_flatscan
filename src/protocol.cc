@@ -12,13 +12,6 @@ Protocol::Protocol() { data_ = new uint8_t[max_buffer_size_]; }
 
 Protocol::~Protocol() { delete[] data_; }
 
-bool Protocol::GetLatestDataFrame(DataFrame& frame) {
-  boost::unique_lock<boost::mutex> lock(mutex_);
-  const bool result{queue_.pop(frame)};
-  lock.unlock();
-  return result;
-}
-
 uint16_t Protocol::GenerateRawFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
   std::copy(kSyncHead, kSyncHead + kSyncHeadLength, data_out);
   uint16_t index{kSyncHeadLength};
@@ -73,9 +66,7 @@ int Protocol::InsertByte(const uint8_t& byte) {
         // field_ = Field::CHK;
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
-        boost::unique_lock<boost::mutex> lock(mutex_);
         queue_.push(frame);
-        lock.unlock();
         return 1;
       } else {
         return -3;
@@ -84,9 +75,7 @@ int Protocol::InsertByte(const uint8_t& byte) {
       if (ExtractChecksum(byte)) {
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
-        boost::unique_lock<boost::mutex> lock(mutex_);
         queue_.push(frame);
-        lock.unlock();
         return 1;
       } else {
         return -4;
