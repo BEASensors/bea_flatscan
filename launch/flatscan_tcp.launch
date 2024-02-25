@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <node name="flatscan" pkg="bea_sensors" type="flatscan" output="screen">
+  <node name="flatscan_tcp" pkg="bea_sensors" type="flatscan" output="screen">
     <param name="communication" value="ethernet"/>
     <param name="ip" value="192.168.1.199"/>
     <param name="port" value="20108"/>
