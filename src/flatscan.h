@@ -3,8 +3,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 
-#include <mutex>
-
 #include "parser.h"
 #include "protocol.h"
 #include "comm_port.h"

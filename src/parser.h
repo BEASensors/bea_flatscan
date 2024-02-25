@@ -2,6 +2,7 @@
 
 #include <sensor_msgs/LaserScan.h>
 
+#include <mutex>
 #include <unordered_map>
 
 #include "bea_sensors/Configure.h"
@@ -56,10 +57,22 @@ class Parser {
                          DataFrame& frame);
   bool ParseDataFrame(const DataFrame& frame);
 
-  const sensor_msgs::LaserScan& laser_scan() const { return laser_scan_; }
-  const Heartbeat& heartbeat() const { return heartbeat_; }
-  const Emergency& emergency() const { return emergency_; }
-  const Parameters& parameters() const { return parameters_; }
+  const sensor_msgs::LaserScan& laser_scan() {
+    std::lock_guard<std::mutex> lock(laser_mutex_);
+    return laser_scan_;
+  }
+  const Heartbeat& heartbeat() {
+    std::lock_guard<std::mutex> lock(heartbeat_mutex_);
+    return heartbeat_;
+  }
+  const Emergency& emergency() {
+    std::lock_guard<std::mutex> lock(emergency_mutex_);
+    return emergency_;
+  }
+  const Parameters& parameters() {
+    std::lock_guard<std::mutex> lock(parameters_mutex_);
+    return parameters_;
+  }
 
  private:
   void GenerateSetBaudrateFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success,
@@ -78,6 +91,11 @@ class Parser {
   void ParseEmergencyMessage(const uint8_t*& data, const int& length, Emergency& message) const;
 
  private:
+  std::mutex laser_mutex_;
+  std::mutex heartbeat_mutex_;
+  std::mutex emergency_mutex_;
+  std::mutex parameters_mutex_;
+
   sensor_msgs::LaserScan laser_scan_;
   Heartbeat heartbeat_;
   Emergency emergency_;

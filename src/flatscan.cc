@@ -87,9 +87,9 @@ bool Flatscan::Initialize() {
   nh_.param("averaging_setting", temp, static_cast<int>(0));
   parameters.averaging = static_cast<uint8_t>(temp);
 
-  laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(scan_topic, 1, this);
-  heartbeat_publisher_ = nh_.advertise<Heartbeat>(heartbeat_topic, 1, this);
-  emergency_publisher_ = nh_.advertise<Emergency>(emergency_topic, 1, this);
+  laser_scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(scan_topic, 10, this);
+  heartbeat_publisher_ = nh_.advertise<Heartbeat>(heartbeat_topic, 10, this);
+  emergency_publisher_ = nh_.advertise<Emergency>(emergency_topic, 10, this);
   configuration_server_ = nh_.advertiseService("configure", &Flatscan::HandleConfiguration, this);
 
   com_.RegisterCallback(this, &Flatscan::HandleReceivedData);

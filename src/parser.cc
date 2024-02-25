@@ -177,18 +177,22 @@ bool Parser::ParseDataFrame(const DataFrame& frame) {
   const uint16_t length = frame.length();
   switch (command) {
     case CommandFromSensor::MDI: {
+      std::lock_guard<std::mutex> lock(laser_mutex_);
       ParseMdiMessage(data, length, laser_scan_);
     } break;
     case CommandFromSensor::SEND_IDENTITY: {
       ParseSendIdentityMessage(data, length);
     } break;
     case CommandFromSensor::SEND_PARAMETERS: {
+      std::lock_guard<std::mutex> lock(parameters_mutex_);
       ParseSendParametersMessage(data, length, parameters_);
     } break;
     case CommandFromSensor::HEARTBEAT: {
+      std::lock_guard<std::mutex> lock(heartbeat_mutex_);
       ParseHeartbeatMessage(data, length, heartbeat_);
     } break;
     case CommandFromSensor::EMERGENCY: {
+      std::lock_guard<std::mutex> lock(emergency_mutex_);
       ParseEmergencyMessage(data, length, emergency_);
     } break;
     case CommandToSensor::SET_BAUDRATE: {
@@ -244,22 +248,26 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
   message.intensities.clear();
   switch (parameters_.information) {
     case 0: {
+      message.ranges.reserve((length - start_index) / 2);
       for (int i = start_index; i < length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
       }
     } break;
     case 1: {
+      message.intensities.reserve((length - start_index) / 2);
       for (int i = start_index; i < length - 1; i += 2) {
         const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.intensities.push_back(static_cast<float>(intensity));
       }
     } break;
     case 2: {
+      message.ranges.reserve(distance_length / 2);
       for (int i = start_index; i < start_index + distance_length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
       }
+      message.intensities.reserve((length - start_index - distance_length) / 2);
       for (int i = start_index + distance_length; i < length - 1; i += 2) {
         const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.intensities.push_back(static_cast<float>(intensity));
