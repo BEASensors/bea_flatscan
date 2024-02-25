@@ -29,10 +29,17 @@ void Flatscan::SpinOnce() {
 }
 
 bool Flatscan::Initialize() {
-  std::string port;
-  nh_.param("port", port, std::string("/dev/ttyUSB0"));
-  int baudrate;
-  nh_.param("baudrate", baudrate, 921600);
+  std::string type;
+  std::string comm_arg_1;
+  int comm_arg_2;
+  nh_.param("communication", type, std::string("serial"));
+  if (type == "serial") {
+    nh_.param("port", comm_arg_1, std::string("/dev/ttyUSB0"));
+    nh_.param("baudrate", comm_arg_2, 921600);
+  } else if (type == "ethernet") {
+    nh_.param("ip", comm_arg_1, std::string("192.168.1.199"));
+    nh_.param("port", comm_arg_2, 20108);
+  }
 
   std::string scan_topic, heartbeat_topic, emergency_topic;
   nh_.param("scan_topic", scan_topic, std::string("/scan"));
@@ -86,7 +93,7 @@ bool Flatscan::Initialize() {
   configuration_server_ = nh_.advertiseService("configure", &Flatscan::HandleConfiguration, this);
 
   com_.RegisterCallback(this, &Flatscan::HandleReceivedData);
-  com_.Connect(port, baudrate);
+  com_.Connect(type, comm_arg_1, comm_arg_2);
 
   InitializeConfiguration(parameters);
   return true;

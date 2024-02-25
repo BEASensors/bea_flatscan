@@ -7,7 +7,7 @@
 
 #include "parser.h"
 #include "protocol.h"
-#include "serial_port.h"
+#include "comm_port.h"
 
 namespace bea_sensors {
 
@@ -39,7 +39,7 @@ class Flatscan {
   ros::Publisher heartbeat_publisher_;
   ros::ServiceServer configuration_server_;
 
-  SerialPort<Flatscan> com_;
+  CommPort<Flatscan> com_;
   Protocol protocol_;
   Parser parser_;
 };

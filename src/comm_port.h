@@ -8,23 +8,28 @@
 #include <sys/types.h>
 #include <termios.h>
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 namespace bea_sensors {
 
 template <class cInstance>
-class SerialPort {
+class CommPort {
  public:
-  SerialPort();
-  ~SerialPort();
+  CommPort();
+  ~CommPort();
 
   typedef void (cInstance::*tFunction)(char* data, int length);
 
   void RegisterCallback(cInstance* instance, tFunction function_ptr);
-  int Connect(std::string port, int baud);
+  int Connect(std::string type, std::string port, int baud);
   int Close();
   int Write(char* data, int length);
 
  protected:
   static void* ReceiverRoutine(void* arg);
+  static void* SerialReceiverRoutine(CommPort* port);
+  static void* EthernetReceiverRoutine(CommPort* port);
   int GetBaudrate(int baud);
   void HandleReceivedData(char* data, int length);
 
@@ -35,6 +40,7 @@ class SerialPort {
   pthread_t receiving_thread_;
   pthread_mutex_t write_mutex_;
 
+  std::string type_;
   std::string port_;
   int serial_fd_ = 0;
   int baudrate_;
@@ -44,24 +50,25 @@ class SerialPort {
 };
 
 template <class cInstance>
-SerialPort<cInstance>::SerialPort() {
+CommPort<cInstance>::CommPort() {
   pthread_mutex_init(&write_mutex_, nullptr);
 }
 
 template <class cInstance>
-SerialPort<cInstance>::~SerialPort() {
+CommPort<cInstance>::~CommPort() {
   pthread_mutex_destroy(&write_mutex_);
 }
 
 template <class cInstance>
-void SerialPort<cInstance>::RegisterCallback(cInstance* instance, SerialPort<cInstance>::tFunction function_ptr) {
+void CommPort<cInstance>::RegisterCallback(cInstance* instance, CommPort<cInstance>::tFunction function_ptr) {
   instance_ = instance;
   function_ptr_ = function_ptr;
   ROS_INFO("Callback function registered");
 }
 
 template <class cInstance>
-int SerialPort<cInstance>::Connect(std::string port, int baud) {
+int CommPort<cInstance>::Connect(std::string type, std::string port, int baud) {
+  type_ = type;
   port_ = port;
   baudrate_ = baud;
   is_running_ = true;
@@ -75,7 +82,7 @@ int SerialPort<cInstance>::Connect(std::string port, int baud) {
 }
 
 template <class cInstance>
-int SerialPort<cInstance>::Close() {
+int CommPort<cInstance>::Close() {
   is_running_ = false;
   pthread_join(receiving_thread_, nullptr);
   close(serial_fd_);
@@ -83,7 +90,7 @@ int SerialPort<cInstance>::Close() {
 }
 
 template <class cInstance>
-int SerialPort<cInstance>::Write(char* data, int length) {
+int CommPort<cInstance>::Write(char* data, int length) {
   if (!is_connected_) {
     return 0;
   }
@@ -94,8 +101,20 @@ int SerialPort<cInstance>::Write(char* data, int length) {
 }
 
 template <class cInstance>
-void* SerialPort<cInstance>::ReceiverRoutine(void* arg) {
-  SerialPort* port = (SerialPort*)arg;
+void* CommPort<cInstance>::ReceiverRoutine(void* arg) {
+  CommPort* port = (CommPort*)arg;
+  if (port->type_ == "serial") {
+    return SerialReceiverRoutine(port);
+  } else if (port->type_ == "ethernet") {
+    return EthernetReceiverRoutine(port);
+  } else {
+    ROS_FATAL("Unknown communication type, please check!");
+    return nullptr;
+  }
+}
+
+template <class cInstance>
+void* CommPort<cInstance>::SerialReceiverRoutine(CommPort* port) {
   while (port->is_running_) {
     // Try to reconnect
     int retries{0};
@@ -165,7 +184,41 @@ void* SerialPort<cInstance>::ReceiverRoutine(void* arg) {
 }
 
 template <class cInstance>
-int SerialPort<cInstance>::GetBaudrate(int baud) {
+void* CommPort<cInstance>::EthernetReceiverRoutine(CommPort* port) {
+  struct sockaddr_in server;
+  std::string message;
+  port->serial_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (port->serial_fd_ == -1) {
+    ROS_ERROR("Cannot create socket");
+    port->is_connected_ = false;
+    return nullptr;
+  }
+
+  server.sin_addr.s_addr = inet_addr(port->port_.c_str());
+  server.sin_family = AF_INET;
+  server.sin_port = htons(port->baudrate_);
+
+  if (connect(port->serial_fd_, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    ROS_ERROR("Connection failed");
+    port->is_connected_ = false;
+    return nullptr;
+  }
+
+  port->is_connected_ = true;
+  ROS_INFO("Connected to server");
+  while (port->is_running_) {
+    char buf[1024];
+    int size = recv(port->serial_fd_, buf, sizeof(buf), 0);
+    port->HandleReceivedData(buf, size);
+  }
+
+  close(port->serial_fd_);
+  return nullptr;
+}
+
+template <class cInstance>
+int CommPort<cInstance>::GetBaudrate(int baud) {
   switch (baud) {
     case 57600:
       return B57600;
@@ -183,7 +236,7 @@ int SerialPort<cInstance>::GetBaudrate(int baud) {
 }
 
 template <class cInstance>
-void SerialPort<cInstance>::HandleReceivedData(char* data, int length) {
+void CommPort<cInstance>::HandleReceivedData(char* data, int length) {
   (instance_->*function_ptr_)(data, length);
 }
 
