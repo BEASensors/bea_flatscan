@@ -9,21 +9,24 @@ Flatscan::Flatscan(const ros::NodeHandle& nh_) : nh_(nh_) { Initialize(); }
 Flatscan::~Flatscan() { com_.Close(); }
 
 void Flatscan::SpinOnce() {
-  const ros::Time current_scan_stamp{parser_.laser_scan().header.stamp};
+  sensor_msgs::LaserScan laser_scan = parser_.laser_scan();
+  const ros::Time current_scan_stamp{laser_scan.header.stamp};
   if (laser_scan_publisher_.getNumSubscribers() > 0 && last_scan_stamp_ < current_scan_stamp) {
-    laser_scan_publisher_.publish(parser_.laser_scan());
+    laser_scan_publisher_.publish(laser_scan);
     last_scan_stamp_ = current_scan_stamp;
   }
 
-  const ros::Time current_heartbeat_stamp{parser_.heartbeat().header.stamp};
+  Heartbeat heartbeat = parser_.heartbeat();
+  const ros::Time current_heartbeat_stamp{heartbeat.header.stamp};
   if (heartbeat_publisher_.getNumSubscribers() > 0 && last_heartbeat_stamp_ < current_heartbeat_stamp) {
-    heartbeat_publisher_.publish(parser_.heartbeat());
+    heartbeat_publisher_.publish(heartbeat);
     last_heartbeat_stamp_ = current_heartbeat_stamp;
   }
 
-  const ros::Time current_emergency_stamp{parser_.emergency().header.stamp};
+  Emergency emergency = parser_.emergency();
+  const ros::Time current_emergency_stamp{emergency.header.stamp};
   if (emergency_publisher_.getNumSubscribers() > 0 && last_emergency_stamp_ < current_emergency_stamp) {
-    emergency_publisher_.publish(parser_.emergency());
+    emergency_publisher_.publish(emergency);
     last_emergency_stamp_ = current_emergency_stamp;
   }
 }

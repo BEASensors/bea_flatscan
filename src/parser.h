@@ -52,24 +52,27 @@ class Parser {
   Parser();
   ~Parser();
 
-  void Initialize(const Parameters& parameters = Parameters()) { parameters_ = parameters; }
+  void Initialize(const Parameters& parameters = Parameters()) {
+    std::lock_guard<std::mutex> lock(parameters_mutex_);
+    parameters_ = parameters;
+  }
   bool GenerateDataFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success, std::string& description,
                          DataFrame& frame);
   bool ParseDataFrame(const DataFrame& frame);
 
-  const sensor_msgs::LaserScan& laser_scan() {
+  const sensor_msgs::LaserScan laser_scan() {
     std::lock_guard<std::mutex> lock(laser_mutex_);
     return laser_scan_;
   }
-  const Heartbeat& heartbeat() {
+  const Heartbeat heartbeat() {
     std::lock_guard<std::mutex> lock(heartbeat_mutex_);
     return heartbeat_;
   }
-  const Emergency& emergency() {
+  const Emergency emergency() {
     std::lock_guard<std::mutex> lock(emergency_mutex_);
     return emergency_;
   }
-  const Parameters& parameters() {
+  const Parameters parameters() {
     std::lock_guard<std::mutex> lock(parameters_mutex_);
     return parameters_;
   }

@@ -94,8 +94,13 @@ int CommPort<cInstance>::Write(char* data, int length) {
   if (!is_connected_) {
     return 0;
   }
+  int res = 0;
   pthread_mutex_lock(&write_mutex_);
-  int res = write(serial_fd_, data, length);
+  if (type_ == "serial") {
+    res = write(serial_fd_, data, length);
+  } else if (type_ == "ethernet") {
+    res = send(serial_fd_, data, length, 0);
+  }
   pthread_mutex_unlock(&write_mutex_);
   return res;
 }
@@ -210,7 +215,9 @@ void* CommPort<cInstance>::EthernetReceiverRoutine(CommPort* port) {
   while (port->is_running_) {
     char buf[1024];
     int size = recv(port->serial_fd_, buf, sizeof(buf), 0);
-    port->HandleReceivedData(buf, size);
+    if (size > 0) {
+      port->HandleReceivedData(buf, size);
+    }
   }
 
   close(port->serial_fd_);
