@@ -1,30 +1,20 @@
 <?xml version="1.0"?>
-<package format="3">
+<package>
   <name>bea_sensors</name>
-  <version>1.0.0</version>
-  <description>BEA LZR Raw-F (Flatscan) ROS2 driver</description>
-  <maintainer email="Chloe.HUANG@beasensors.com">bs</maintainer>
-  <license>BSD-3-Clause</license>
+  <version>0.0.0</version>
+  <description>bea sensor drivers</description>
+  <maintainer email="song.boyang5591@outlook.com">bs</maintainer>
+  <license>TODO</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
 
-  <depend>rclcpp</depend>
-  <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>angles</depend>
-  <depend>boost</depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
 
-  <exec_depend>launch</exec_depend>
-  <exec_depend>launch_ros</exec_depend>
-  <exec_depend>ament_index_python</exec_depend>
-  <exec_depend>rviz2</exec_depend>
-
-  <build_depend>rosidl_default_generators</build_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-
-  <member_of_group>rosidl_interface_packages</member_of_group>
-
-  <export>
-    <build_type>ament_cmake</build_type>
-  </export>
 </package>

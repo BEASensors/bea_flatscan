@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+
+<launch>
+  <node name="flatscan_422" pkg="bea_sensors" type="flatscan" output="screen">
+    <param name="communication" value="serial"/>
+    <param name="port" value="/dev/ttyUSB0"/>
+    <param name="baudrate" value="921600"/>
+
+    <param name="scan_frame_id" value="laser_link"/>
+    <param name="scan_topic" value="/scan"/>
+    <param name="heartbeat_topic" value="/heartbeat"/>
+    <param name="emergency_topic" value="/emergency"/>
+
+    <param name="min_range" value="0"/>           <!-- in meters -->
+    <param name="max_range" value="8"/>           <!-- in meters -->
+    <param name="enable_temperature" value="1"/>
+    <param name="information_in_mdi" value="2"/>
+    <param name="detection_field_mode" value="HD"/>
+    <param name="optimization" value="0"/>
+    <param name="angle_first" value="0."/>         <!-- in degrees-->
+    <param name="angle_last" value="108."/>      <!-- in degrees-->
+    <param name="enable_counter" value="1"/>
+    <param name="heartbeat_period" value="5"/>    <!-- in seconds -->
+    <param name="enalbe_facet" value="1"/>
+    <param name="averaging_setting" value="0"/>
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bea_sensors)/launch/flatscan.rviz"/>
+</launch>

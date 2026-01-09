@@ -1,6 +1,6 @@
 #include "protocol.h"
 
-#include <rclcpp/rclcpp.hpp>
+#include <ros/console.h>
 
 constexpr uint16_t polynomial{0x90d9};
 
@@ -40,7 +40,7 @@ uint16_t Protocol::GenerateRawFrame(const uint16_t& command, const uint8_t* data
   // std::cout << std::endl;
 
   if (index != frame_length) {
-    RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "GenerateRawFrame error");
+    ROS_ERROR("GenerateRawFrame error");
     return 0;
   }
 
@@ -157,11 +157,11 @@ bool Protocol::ExtractChecksum(const uint8_t& byte) {
   }
   if (checksum_ == CRC16(frame, frame_length)) {
     delete[] frame;
-    RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "CRC16 check succeeded");
+    ROS_INFO("CRC16 check succeeded");
     return true;
   } else {
     delete[] frame;
-    RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "CRC16 check failed");
+    ROS_WARN("CRC16 check failed");
     return false;
   }
 }

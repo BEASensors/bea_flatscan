@@ -2,7 +2,7 @@
 
 #include <fcntl.h>
 #include <pthread.h>
-#include <rclcpp/rclcpp.hpp>
+#include <ros/console.h>
 #include <sys/poll.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -10,7 +10,6 @@
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netinet/tcp.h>
 
 namespace bea_sensors {
 
@@ -21,10 +20,8 @@ class CommPort {
   ~CommPort();
 
   typedef void (cInstance::*tFunction)(char* data, int length);
-  typedef void (cInstance::*tOnConnected)();
 
   void RegisterCallback(cInstance* instance, tFunction function_ptr);
-  void RegisterConnectedCallback(cInstance* instance, tOnConnected on_connected_ptr);
   int Connect(std::string type, std::string port, int baud);
   int Close();
   int Write(char* data, int length);
@@ -50,7 +47,6 @@ class CommPort {
 
   cInstance* instance_;
   tFunction function_ptr_ = 0;
-  tOnConnected on_connected_ptr_ = 0;
 };
 
 template <class cInstance>
@@ -67,13 +63,7 @@ template <class cInstance>
 void CommPort<cInstance>::RegisterCallback(cInstance* instance, CommPort<cInstance>::tFunction function_ptr) {
   instance_ = instance;
   function_ptr_ = function_ptr;
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Callback function registered");
-}
-
-template <class cInstance>
-void CommPort<cInstance>::RegisterConnectedCallback(cInstance* instance, CommPort<cInstance>::tOnConnected on_connected_ptr) {
-  instance_ = instance;
-  on_connected_ptr_ = on_connected_ptr;
+  ROS_INFO("Callback function registered");
 }
 
 template <class cInstance>
@@ -83,7 +73,7 @@ int CommPort<cInstance>::Connect(std::string type, std::string port, int baud) {
   baudrate_ = baud;
   is_running_ = true;
 
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Creating data receiving thread");
+  ROS_INFO("Creating data receiving thread");
   if (pthread_create(&receiving_thread_, nullptr, ReceiverRoutine, (void*)this)) {
     return -1;
   }
@@ -123,7 +113,7 @@ void* CommPort<cInstance>::ReceiverRoutine(void* arg) {
   } else if (port->type_ == "ethernet") {
     return EthernetReceiverRoutine(port);
   } else {
-    RCLCPP_FATAL(rclcpp::get_logger("bea_sensors"), "Unknown communication type, please check!");
+    ROS_FATAL("Unknown communication type, please check!");
     return nullptr;
   }
 }
@@ -138,10 +128,10 @@ void* CommPort<cInstance>::SerialReceiverRoutine(CommPort* port) {
       if (port->serial_fd_ < 0) {
         ++retries;
         if (retries > 10) {
-          RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "Cannot open %s, please check", port->port_.c_str());
+          ROS_ERROR("Cannot open %s, please check", port->port_.c_str());
           return nullptr;
         }
-        RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "Open %s failed, tried %d times, try again..", port->port_.c_str(), retries);
+        ROS_WARN("Open %s failed, tried %d times, try again..", port->port_.c_str(), retries);
         sleep(1);
         continue;
       }
@@ -162,10 +152,7 @@ void* CommPort<cInstance>::SerialReceiverRoutine(CommPort* port) {
       tcsetattr(port->serial_fd_, TCSANOW, &newtio);
 
       port->is_connected_ = true;
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Open %s successfully (baudrate: %d), let's rock!", port->port_.c_str(), port->baudrate_);
-      if (port->on_connected_ptr_) {
-        (port->instance_->*port->on_connected_ptr_)();
-      }
+      ROS_INFO("Open %s successfully (baudrate: %d), let's rock!", port->port_.c_str(), port->baudrate_);
       break;
     }
 
@@ -197,89 +184,45 @@ void* CommPort<cInstance>::SerialReceiverRoutine(CommPort* port) {
   }
 
   close(port->serial_fd_);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Port %s closed", port->port_.c_str());
+  ROS_INFO("Port %s closed", port->port_.c_str());
   return nullptr;
 }
 
 template <class cInstance>
 void* CommPort<cInstance>::EthernetReceiverRoutine(CommPort* port) {
   struct sockaddr_in server;
+  std::string message;
+  port->serial_fd_ = socket(AF_INET, SOCK_STREAM, 0);
 
-  while (port->is_running_) {
-    // Create socket
-    port->serial_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (port->serial_fd_ == -1) {
-      RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "Cannot create socket");
-      port->is_connected_ = false;
-      sleep(1);
-      continue;
-    }
-
-    // Socket options: keepalive, recv timeout, nodelay
-    int yes = 1;
-    setsockopt(port->serial_fd_, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes));
-
-    struct timeval rcv_timeout;
-    rcv_timeout.tv_sec = 1;  // 1s receive timeout
-    rcv_timeout.tv_usec = 0;
-    setsockopt(port->serial_fd_, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout));
-
-    setsockopt(port->serial_fd_, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
-
-    // Build server address (port_->port_ holds IP, baudrate_ holds TCP port)
-    memset(&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_port = htons(port->baudrate_);
-    server.sin_addr.s_addr = inet_addr(port->port_.c_str());
-
-    // Connect
-    if (connect(port->serial_fd_, (struct sockaddr*)&server, sizeof(server)) < 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "Connection failed");
-      port->is_connected_ = false;
-      close(port->serial_fd_);
-      sleep(1);
-      continue;  // retry
-    }
-
-    port->is_connected_ = true;
-    RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Connected to server");
-    if (port->on_connected_ptr_) {
-      (port->instance_->*port->on_connected_ptr_)();
-    }
-
-    // Receive loop
-    while (port->is_running_) {
-      char buf[1024];
-      int size = recv(port->serial_fd_, buf, sizeof(buf), 0);
-      if (size > 0) {
-        port->HandleReceivedData(buf, size);
-        continue;
-      }
-
-      // size == 0: peer closed; size < 0: timeout or error
-      if (size == 0) {
-        RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "Server closed connection, will reconnect");
-      } else {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          // recv timeout - treat as inactivity, trigger reconnect to recover after device power cycle
-          RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "No data (timeout), reconnecting...");
-        } else {
-          RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "Receive error (%d), reconnecting...", errno);
-        }
-      }
-      break;  // break inner loop to reconnect
-    }
-
-    // Clean up and prepare to reconnect
+  if (port->serial_fd_ == -1) {
+    ROS_ERROR("Cannot create socket");
     port->is_connected_ = false;
-    close(port->serial_fd_);
-    // loop continues to reconnect while is_running_
+    return nullptr;
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Ethernet receiver stopped");
+  server.sin_addr.s_addr = inet_addr(port->port_.c_str());
+  server.sin_family = AF_INET;
+  server.sin_port = htons(port->baudrate_);
+
+  if (connect(port->serial_fd_, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    ROS_ERROR("Connection failed");
+    port->is_connected_ = false;
+    return nullptr;
+  }
+
+  port->is_connected_ = true;
+  ROS_INFO("Connected to server");
+  while (port->is_running_) {
+    char buf[1024];
+    int size = recv(port->serial_fd_, buf, sizeof(buf), 0);
+    if (size > 0) {
+      port->HandleReceivedData(buf, size);
+    }
+  }
+
+  close(port->serial_fd_);
   return nullptr;
 }
-
 
 template <class cInstance>
 int CommPort<cInstance>::GetBaudrate(int baud) {

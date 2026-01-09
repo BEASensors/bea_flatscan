@@ -1,7 +1,7 @@
 #include "parser.h"
 
 #include <angles/angles.h>
-#include <rclcpp/rclcpp.hpp>
+#include <ros/console.h>
 
 namespace bea_sensors {
 
@@ -184,8 +184,8 @@ bool Parser::ParseDataFrame(const DataFrame& frame) {
       ParseSendIdentityMessage(data, length);
     } break;
     case CommandFromSensor::SEND_PARAMETERS: {
-      // Ignore parameters sent from device to avoid overriding local fixed config
-      return true;
+      std::lock_guard<std::mutex> lock(parameters_mutex_);
+      ParseSendParametersMessage(data, length, parameters_);
     } break;
     case CommandFromSensor::HEARTBEAT: {
       std::lock_guard<std::mutex> lock(heartbeat_mutex_);
@@ -196,71 +196,45 @@ bool Parser::ParseDataFrame(const DataFrame& frame) {
       ParseEmergencyMessage(data, length, emergency_);
     } break;
     case CommandToSensor::SET_BAUDRATE: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Set baudrate succeeded: %i", data[0]);
+      ROS_INFO("Set baudrate succeeded: %i", data[0]);
     } break;
     case CommandToSensor::STORE_PARAMETERS: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Store parameters succeeded");
+      ROS_INFO("Store parameters succeeded");
     } break;
     case CommandToSensor::RESET_MDI_COUNTER: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Reset MDI counter succeeded");
+      ROS_INFO("Reset MDI counter succeeded");
     } break;
     case CommandToSensor::RESET_HEARTBEAT_COUNTER: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Reset heartbeat counter succeeded");
+      ROS_INFO("Reset heartbeat counter succeeded");
     } break;
     case CommandToSensor::RESET_EMERGENCY_COUNTER: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Reset emergency counter succeeded");
+      ROS_INFO("Reset emergency counter succeeded");
     } break;
     case CommandToSensor::SET_LED: {
-      RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Set LED succeeded");
+      ROS_INFO("Set LED succeeded");
     } break;
     default:
-      RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "Unknown CMD from sensor: %i", command);
+      ROS_WARN("Unknown CMD from sensor: %i", command);
       return false;
   }
   return true;
 }
 
-void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msgs::msg::LaserScan& message) const {
+void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msgs::LaserScan& message) const {
   uint16_t start_index{0};
   start_index += (parameters_.counter > 0 ? 6 : 0);
   start_index += (parameters_.temperature > 0 ? 2 : 0);
   start_index += (parameters_.facet > 0 ? 1 : 0);
+  const uint16_t distance_length{static_cast<uint16_t>(parameters_.number_of_spots * 2)};
 
-  if (length <= start_index + 1) {
+  uint16_t total_length{static_cast<uint16_t>(start_index + distance_length)};
+  total_length += parameters_.information == 2 ? distance_length : 0;
+  if (total_length != length) {
+    // ROS_ERROR("MDI data length mismatch (should be %i but get %i)", total_length, length);
     return;
   }
 
-  uint16_t inferred_spots{parameters_.number_of_spots};
-  uint16_t distance_length{static_cast<uint16_t>(static_cast<uint32_t>(inferred_spots) * 2U)};
-
-  // 动态推断点数与布局
-  // std::cout << "parameters_.information: " << parameters_.information << std::endl;
-  // std::cout << "parameters_.number_of_spots: " << parameters_.number_of_spots << std::endl;
-  // if (parameters_.information == 0) {
-  //   // 仅距离：剩余全部是距离
-  //   if ((length - start_index) % 2 != 0) {
-  //     return;
-  //   }
-  //   distance_length = static_cast<uint16_t>(length - start_index);
-  //   inferred_spots = static_cast<uint16_t>(distance_length / 2);
-  // } else if (parameters_.information == 2) {
-  //   // 距离 + 强度：后半长度等于距离长度
-  //   if ((length - start_index) % 4 != 0) {
-  //     return;
-  //   }
-  //   distance_length = static_cast<uint16_t>((length - start_index) / 2);
-  //   inferred_spots = static_cast<uint16_t>(distance_length / 2);
-  // } else if (parameters_.information == 1) {
-  //   // 仅强度：无法解距离，直接返回
-  //   return;
-  // } else {
-  //   return;
-  // }
-  // std::cout << "inferred_spots: " << inferred_spots << std::endl;
-  // 使用推断点数进行时间增量计算（不修改成员）
-  uint16_t spots_used = inferred_spots > 0 ? inferred_spots : parameters_.number_of_spots;
-
-  // Timestamps will be set at publish time
+  message.header.stamp = ros::Time::now();
   message.header.frame_id = parameters_.header.frame_id;
   message.angle_min = angles::from_degrees(static_cast<float>(parameters_.angle_first) * 1e-2);
   message.angle_max = angles::from_degrees(static_cast<float>(parameters_.angle_last) * 1e-2);
@@ -268,7 +242,7 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
   message.range_min = parameters_.range_min;
   message.range_max = parameters_.range_max;
   message.scan_time = parameters_.mode == 1 ? kHighDensityRefreshPeriod : kHighSpeedRefreshPeriod;
-  message.time_increment = spots_used > 0 ? (message.scan_time / spots_used) : 0.0;
+  message.time_increment = message.scan_time / parameters_.number_of_spots;
 
   message.ranges.clear();
   message.intensities.clear();
@@ -278,6 +252,13 @@ void Parser::ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msg
       for (int i = start_index; i < length - 1; i += 2) {
         const uint16_t range_in_mm{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
         message.ranges.push_back(static_cast<float>(range_in_mm) * 0.001);
+      }
+    } break;
+    case 1: {
+      message.intensities.reserve((length - start_index) / 2);
+      for (int i = start_index; i < length - 1; i += 2) {
+        const uint16_t intensity{static_cast<uint16_t>(data[i] | (data[i + 1] << 8))};
+        message.intensities.push_back(static_cast<float>(intensity));
       }
     } break;
     case 2: {
@@ -303,11 +284,11 @@ void Parser::ParseSendIdentityMessage(const uint8_t*& data, const int& length) c
   const uint8_t software_revision{data[5]};
   const uint8_t software_prototype{data[6]};
   const uint32_t serial_number{static_cast<uint32_t>(data[7] | data[8] << 8 | data[9] << 16 | data[10] << 24)};
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "product_part_number: %i", product_part_number);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "software_version: %i", software_version);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "software_revision: %i", software_revision);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "software_prototype: %i", software_prototype);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "serial_number: %i", serial_number);
+  ROS_INFO("product_part_number: %i", product_part_number);
+  ROS_INFO("software_version: %i", software_version);
+  ROS_INFO("software_revision: %i", software_revision);
+  ROS_INFO("software_prototype: %i", software_prototype);
+  ROS_INFO("serial_number: %i", serial_number);
 }
 
 void Parser::ParseSendParametersMessage(const uint8_t*& data, const int& length, Parameters& parameters) const {
@@ -326,32 +307,32 @@ void Parser::ParseSendParametersMessage(const uint8_t*& data, const int& length,
   parameters.facet = data[26];
   parameters.averaging = data[27];
 
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "verification_code: %i", verification_code);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "charge: %i", charge);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "temperature_enabled: %i", parameters.temperature);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "information: %i", parameters.information);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "detection_field_mode: %i", parameters.mode);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "optimization: %i", parameters.optimization);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "number_of_spots: %i", parameters.number_of_spots);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "angle_first: %f", static_cast<float>(parameters.angle_first) * 1e-2);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "angle_last: %f", static_cast<float>(parameters.angle_last) * 1e-2);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "counter_enabled: %i", parameters.counter);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "heartbeat_period: %i", parameters.heartbeat_period);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "facet_enabled: %i", parameters.facet);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "averaging_setting: %i", parameters.averaging);
+  ROS_INFO("verification_code: %i", verification_code);
+  ROS_INFO("charge: %i", charge);
+  ROS_INFO("temperature_enabled: %i", parameters.temperature);
+  ROS_INFO("information: %i", parameters.information);
+  ROS_INFO("detection_field_mode: %i", parameters.mode);
+  ROS_INFO("optimization: %i", parameters.optimization);
+  ROS_INFO("number_of_spots: %i", parameters.number_of_spots);
+  ROS_INFO("angle_first: %f", static_cast<float>(parameters.angle_first) * 1e-2);
+  ROS_INFO("angle_last: %f", static_cast<float>(parameters.angle_last) * 1e-2);
+  ROS_INFO("counter_enabled: %i", parameters.counter);
+  ROS_INFO("heartbeat_period: %i", parameters.heartbeat_period);
+  ROS_INFO("facet_enabled: %i", parameters.facet);
+  ROS_INFO("averaging_setting: %i", parameters.averaging);
 }
 
-void Parser::ParseHeartbeatMessage(const uint8_t*& data, const int& length, bea_sensors::msg::Heartbeat& message) const {
-  // Timestamp will be set at publish time
+void Parser::ParseHeartbeatMessage(const uint8_t*& data, const int& length, Heartbeat& message) const {
+  message.header.stamp = ros::Time::now();
   message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
 }
 
-void Parser::ParseEmergencyMessage(const uint8_t*& data, const int& length, bea_sensors::msg::Emergency& message) const {
-  // Timestamp will be set at publish time
+void Parser::ParseEmergencyMessage(const uint8_t*& data, const int& length, Emergency& message) const {
+  message.header.stamp = ros::Time::now();
   message.count = static_cast<uint16_t>(data[4] | data[5] << 8);
   message.rs485_error = static_cast<uint16_t>(data[6] | data[7] << 8);
   message.sensor_error = static_cast<uint16_t>(data[8] | data[9] << 8);
-  RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "Emergency count: %i, error code: %i %i", message.count, message.rs485_error, message.sensor_error);
+  ROS_INFO("Emergency count: %i, error code: %i %i", message.count, message.rs485_error, message.sensor_error);
 }
 
 }  // namespace bea_sensors

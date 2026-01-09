@@ -1,19 +1,17 @@
 #pragma once
 
-#include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/LaserScan.h>
 
 #include <mutex>
 #include <unordered_map>
 
-#include "bea_sensors/srv/configure.hpp"
-#include "bea_sensors/msg/emergency.hpp"
-#include "bea_sensors/msg/heartbeat.hpp"
-#include "bea_sensors/msg/parameters.hpp"
+#include "bea_sensors/Configure.h"
+#include "bea_sensors/Emergency.h"
+#include "bea_sensors/Heartbeat.h"
+#include "bea_sensors/Parameters.h"
 #include "data_frame.h"
 
 namespace bea_sensors {
-
-using Parameters = bea_sensors::msg::Parameters;
 
 constexpr float kHighDensityResolution{0.18 + 0.09};
 constexpr float kHighDensityRefreshPeriod{43 * 1e-3};
@@ -62,15 +60,15 @@ class Parser {
                          DataFrame& frame);
   bool ParseDataFrame(const DataFrame& frame);
 
-  const sensor_msgs::msg::LaserScan laser_scan() {
+  const sensor_msgs::LaserScan laser_scan() {
     std::lock_guard<std::mutex> lock(laser_mutex_);
     return laser_scan_;
   }
-  const bea_sensors::msg::Heartbeat heartbeat() {
+  const Heartbeat heartbeat() {
     std::lock_guard<std::mutex> lock(heartbeat_mutex_);
     return heartbeat_;
   }
-  const bea_sensors::msg::Emergency emergency() {
+  const Emergency emergency() {
     std::lock_guard<std::mutex> lock(emergency_mutex_);
     return emergency_;
   }
@@ -89,11 +87,11 @@ class Parser {
   void GenerateSetLedFrame(const std::string& command, const std::string& subcommand, const std::string& value, bool& success,
                            std::string& description, DataFrame& frame) const;
 
-  void ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msgs::msg::LaserScan& message) const;
+  void ParseMdiMessage(const uint8_t*& data, const int& length, sensor_msgs::LaserScan& message) const;
   void ParseSendIdentityMessage(const uint8_t*& data, const int& length) const;
   void ParseSendParametersMessage(const uint8_t*& data, const int& length, Parameters& parameters) const;
-  void ParseHeartbeatMessage(const uint8_t*& data, const int& length, bea_sensors::msg::Heartbeat& message) const;
-  void ParseEmergencyMessage(const uint8_t*& data, const int& length, bea_sensors::msg::Emergency& message) const;
+  void ParseHeartbeatMessage(const uint8_t*& data, const int& length, Heartbeat& message) const;
+  void ParseEmergencyMessage(const uint8_t*& data, const int& length, Emergency& message) const;
 
  private:
   std::mutex laser_mutex_;
@@ -101,9 +99,9 @@ class Parser {
   std::mutex emergency_mutex_;
   std::mutex parameters_mutex_;
 
-  sensor_msgs::msg::LaserScan laser_scan_;
-  bea_sensors::msg::Heartbeat heartbeat_;
-  bea_sensors::msg::Emergency emergency_;
+  sensor_msgs::LaserScan laser_scan_;
+  Heartbeat heartbeat_;
+  Emergency emergency_;
   Parameters parameters_;
 };
 
