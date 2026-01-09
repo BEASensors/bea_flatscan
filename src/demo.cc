@@ -1,19 +1,11 @@
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "flatscan.h"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "bea_sensor_driver");
-  ros::NodeHandle nh("~");
-
-  bea_sensors::Flatscan flatscan(nh);
-
-  ros::Rate rate(30.);
-  while (ros::ok()) {
-    flatscan.SpinOnce();
-    ros::spinOnce();
-    rate.sleep();
-  }
-
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<bea_sensors::Flatscan>();
+  rclcpp::spin(node);
+  rclcpp::shutdown();
   return 0;
 }

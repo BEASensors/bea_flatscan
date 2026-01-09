@@ -1,6 +1,6 @@
 #include "protocol.h"
 
-#include <rclcpp/rclcpp.hpp>
+#include <ros/console.h>
 
 constexpr uint16_t polynomial{0x90d9};
 
@@ -11,6 +11,13 @@ Protocol::Protocol(const uint16_t& buffer_size) : max_buffer_size_(buffer_size) 
 Protocol::Protocol() { data_ = new uint8_t[max_buffer_size_]; }
 
 Protocol::~Protocol() { delete[] data_; }
+
+bool Protocol::GetLatestDataFrame(DataFrame& frame) {
+  boost::unique_lock<boost::mutex> lock(mutex_);
+  const bool result{queue_.pop(frame)};
+  lock.unlock();
+  return result;
+}
 
 uint16_t Protocol::GenerateRawFrame(const uint16_t& command, const uint8_t* data, const uint16_t& length, uint8_t* data_out) {
   std::copy(kSyncHead, kSyncHead + kSyncHeadLength, data_out);
@@ -40,7 +47,7 @@ uint16_t Protocol::GenerateRawFrame(const uint16_t& command, const uint8_t* data
   // std::cout << std::endl;
 
   if (index != frame_length) {
-    RCLCPP_ERROR(rclcpp::get_logger("bea_sensors"), "GenerateRawFrame error");
+    LOG_ERROR("GenerateRawFrame error");
     return 0;
   }
 
@@ -66,7 +73,9 @@ int Protocol::InsertByte(const uint8_t& byte) {
         // field_ = Field::CHK;
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
+        boost::unique_lock<boost::mutex> lock(mutex_);
         queue_.push(frame);
+        lock.unlock();
         return 1;
       } else {
         return -3;
@@ -75,7 +84,9 @@ int Protocol::InsertByte(const uint8_t& byte) {
       if (ExtractChecksum(byte)) {
         field_ = Field::SYNC;
         DataFrame frame(command_, data_, data_length_);
+        boost::unique_lock<boost::mutex> lock(mutex_);
         queue_.push(frame);
+        lock.unlock();
         return 1;
       } else {
         return -4;
@@ -157,11 +168,11 @@ bool Protocol::ExtractChecksum(const uint8_t& byte) {
   }
   if (checksum_ == CRC16(frame, frame_length)) {
     delete[] frame;
-    RCLCPP_INFO(rclcpp::get_logger("bea_sensors"), "CRC16 check succeeded");
+    LOG_INFO("CRC16 check succeeded");
     return true;
   } else {
     delete[] frame;
-    RCLCPP_WARN(rclcpp::get_logger("bea_sensors"), "CRC16 check failed");
+    LOG_WARN("CRC16 check failed");
     return false;
   }
 }
